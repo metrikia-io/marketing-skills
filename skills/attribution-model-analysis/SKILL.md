@@ -10,6 +10,17 @@ This skill turns a raw touchpoint log into a defensible read of which channels
 actually contribute to conversions, by computing several attribution models
 side by side and interpreting the differences between them.
 
+## Outcome contract
+
+- **Outcome**: a channel by model comparison table plus a reasoned
+  recommendation of one reporting model, always bracketed by first-touch and
+  last-touch as the bounds of the honest uncertainty.
+- **Done when**: every model column reconciles to the same total conversion
+  value, the recommendation cites observable properties of the dataset, and the
+  limits of attribution (no incrementality claim) are stated in the output.
+- **Evidence**: the user's touchpoint log, the reconstructed per-conversion
+  paths, and per-path share sums verified to equal 1.
+
 ## When to use this skill
 
 Reach for it in these situations:

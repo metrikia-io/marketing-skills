@@ -1,0 +1,13 @@
+{
+  "name": "marketing-skills",
+  "description": "Marketing analytics skills: attribution models, ROAS and MER auditing, UTM taxonomy, closing-funnel metrics.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Metrikia",
+    "url": "https://metrikia.io"
+  },
+  "homepage": "https://metrikia.io",
+  "repository": "https://github.com/metrikia-io/marketing-skills",
+  "license": "MIT",
+  "keywords": ["claude", "claude-skills", "marketing", "attribution", "analytics"]
+}
