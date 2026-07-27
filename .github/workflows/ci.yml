@@ -1,0 +1,85 @@
+name: Validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate SKILL.md frontmatter
+        run: |
+          failed=0
+          for skill_md in skills/*/SKILL.md; do
+            if [ ! -f "$skill_md" ]; then
+              continue
+            fi
+
+            # Check if file starts with ---
+            if ! head -1 "$skill_md" | grep -q "^---$"; then
+              echo "FAIL: $skill_md does not start with ---"
+              failed=1
+            fi
+
+            # Check for name: in frontmatter
+            if ! grep -q "^name:" "$skill_md"; then
+              echo "FAIL: $skill_md is missing 'name:' in frontmatter"
+              failed=1
+            fi
+
+            # Check for description: in frontmatter
+            if ! grep -q "^description:" "$skill_md"; then
+              echo "FAIL: $skill_md is missing 'description:' in frontmatter"
+              failed=1
+            fi
+          done
+
+          if [ $failed -eq 1 ]; then
+            echo "Frontmatter validation failed"
+            exit 1
+          fi
+
+          echo "Frontmatter validation passed"
+
+      - name: Forbidden characters
+        run: |
+          # Check for em-dash (U+2014)
+          if grep -r $'—' skills/ README.md 2>/dev/null; then
+            echo "FAIL: Found em-dash character (U+2014) in skills or README.md"
+            exit 1
+          fi
+          echo "Forbidden character check passed"
+
+      - name: Internal reference sweep
+        run: |
+          failed=0
+          forbidden_patterns=(
+            "bin/console"
+            "app:diana"
+            "app:create"
+            "app:seed"
+            "app:index"
+            "docker compose"
+            "railway ssh"
+            "make ci"
+            "make test"
+            "make db"
+          )
+
+          for pattern in "${forbidden_patterns[@]}"; do
+            if grep -rn "$pattern" skills/ README.md 2>/dev/null; then
+              echo "FAIL: Found internal reference '$pattern' in public content"
+              failed=1
+            fi
+          done
+
+          if [ $failed -eq 1 ]; then
+            exit 1
+          fi
+
+          echo "Internal reference sweep passed"
