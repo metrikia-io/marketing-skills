@@ -7,7 +7,7 @@ Open-source Claude Skills for marketing analytics, attribution, and ad performan
 
 ## What is this?
 
-Claude Skills are reusable expert workflows packaged as folders containing a `SKILL.md` file. Each skill teaches Claude a methodology for a specific marketing task. You can install them in Claude Code or the Claude apps and invoke them with `/skill-name` to get expert guidance on your own campaign data.
+Claude Skills are reusable expert workflows packaged as folders containing a `SKILL.md` file. Each skill teaches Claude a methodology for a specific marketing task. Once installed in Claude Code or the Claude apps, Claude applies a skill automatically when your request matches it, and you can also invoke one explicitly with `/skill-name`.
 
 Skills include:
 - Step-by-step workflow instructions
@@ -34,7 +34,7 @@ Clone this repository and copy a skill folder into your local skills directory:
 cp -r skills/attribution-model-analysis ~/.claude/skills/
 ```
 
-Then use it in Claude Code or the Claude web app with `/attribution-model-analysis`.
+Claude then applies the skill automatically when your request calls for attribution analysis, or you can invoke it explicitly with `/attribution-model-analysis`.
 
 ## Skills
 
