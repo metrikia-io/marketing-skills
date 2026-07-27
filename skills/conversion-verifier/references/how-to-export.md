@@ -35,8 +35,8 @@ would never report. The export without the breakdown avoids that multiplication,
 which is what makes the final figures defensible. It is one extra click and it
 replaces a number typed by hand, which is where mistakes come from.
 
-**Why the click/view split matters.** View-through conversions — sales credited
-to people who saw the ad and never clicked — are usually the largest contested
+**Why the click/view split matters.** View-through conversions - sales credited
+to people who saw the ad and never clicked - are usually the largest contested
 slice of the gap and are counted by default. Without those two columns they stay
 invisible and the report is meaningfully weaker. It is worth two extra clicks.
 
@@ -72,7 +72,7 @@ Payment Value → **Breakdown by Day** → **Export**.
 3. Choose **Plain CSV file**.
 
 The export ships one row per line item, so a three-product order appears three
-times. The script collapses these by order name automatically — no cleanup
+times. The script collapses these by order name automatically - no cleanup
 needed.
 
 **Keep these columns if given the choice:** Name, Paid at (or Created at),

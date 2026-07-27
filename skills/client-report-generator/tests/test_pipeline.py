@@ -28,7 +28,7 @@ RESULTS = []
 def check(name, condition, detail=""):
     RESULTS.append((name, bool(condition), detail))
     print(f"  [{'PASS' if condition else 'FAIL'}] {name}"
-          + (f"  — {detail}" if detail and not condition else ""))
+          + (f"  - {detail}" if detail and not condition else ""))
 
 
 def _aggregate(*extra):
@@ -51,7 +51,7 @@ def test_channel_detection():
     for row in data["channels"]:
         check(f"{row['channel']} has a real ROAS",
               row["this"]["roas"] and row["this"]["roas"] > 0,
-              f'ROAS is {row["this"]["roas"]} — a column probably went undetected')
+              f'ROAS is {row["this"]["roas"]} - a column probably went undetected')
 
 
 def test_period_comparison():
@@ -203,7 +203,7 @@ def test_preamble_zero_report_is_refused():
              "--orders", str(EXAMPLES / "shopify_june.csv")],
             capture_output=True, text=True, check=False)
         data = json.loads(result.stdout)
-    # Either the preamble is skipped and real numbers appear, or it is refused —
+    # Either the preamble is skipped and real numbers appear, or it is refused -
     # never a silent zero report.
     if "error" in data:
         check("preamble is refused rather than zeroed", True)

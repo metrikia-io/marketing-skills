@@ -1,6 +1,6 @@
 ---
 name: client-report-generator
-description: Turn a month of ad exports into a client-ready performance report — the numbers, a written explanation of what changed and why, and an honest note on what the numbers can be trusted for. Use this whenever someone needs to report ad performance to a client or a boss, prepare a monthly or weekly marketing report, explain what happened across Meta/Google/TikTok and the store, write up campaign results for a non-technical stakeholder, or replace the manual pull-into-a-deck reporting a VA does by hand. Also use it when someone says their reporting takes too long, that clients don't understand the numbers, or asks how to present ad results credibly. Produces a print-ready report whose written analysis reads like a senior media buyer wrote it, because the model writes it from the actual figures.
+description: Turn a month of ad exports into a client-ready performance report - the numbers, a written explanation of what changed and why, and an honest note on what the numbers can be trusted for. Use this whenever someone needs to report ad performance to a client or a boss, prepare a monthly or weekly marketing report, explain what happened across Meta/Google/TikTok and the store, write up campaign results for a non-technical stakeholder, or replace the manual pull-into-a-deck reporting a VA does by hand. Also use it when someone says their reporting takes too long, that clients don't understand the numbers, or asks how to present ad results credibly. Produces a print-ready report whose written analysis reads like a senior media buyer wrote it, because the model writes it from the actual figures.
 license: MIT
 ---
 
@@ -13,7 +13,7 @@ value in it.
 
 ## Outcome contract
 
-- **Outcome**: a client-ready report in three sections — the numbers period over
+- **Outcome**: a client-ready report in three sections - the numbers period over
   period, a written analysis of what changed and why, and an honest note on what
   the numbers can be trusted for.
 - **Done when**: every claim in the narrative traces to a figure in the summary,
@@ -40,33 +40,33 @@ pays an agency for, and it is the section this tool exists to produce well.
 
 ## Checklist
 
-1. **Collect two months of exports** — ad channels and store, this period and last
-2. **Run `aggregate.py`** — channel totals, period-over-period, what moved
-3. **Read the summary and write the narrative** — the real work, three short parts
-4. **Build the report** — `build_report.py`, then how to get a PDF
+1. **Collect two months of exports** - ad channels and store, this period and last
+2. **Run `aggregate.py`** - channel totals, period-over-period, what moved
+3. **Read the summary and write the narrative** - the real work, three short parts
+4. **Build the report** - `build_report.py`, then how to get a PDF
 
 ## Step 1: Ask for the exports
 
-Give the clicks in their own interface — name the buttons.
+Give the clicks in their own interface - name the buttons.
 
 > Let's build your client report. I need two months so I can show what changed:
 > this month and last.
 >
-> **1. Meta** — Ads Manager, campaign level, for each month: columns campaign
+> **1. Meta** - Ads Manager, campaign level, for each month: columns campaign
 > name, amount spent, purchases, purchase conversion value, link clicks. Export
 > CSV, once per month.
 >
-> **2. Google, if you run it** — same idea: cost, conversions, conv. value, clicks,
+> **2. Google, if you run it** - same idea: cost, conversions, conv. value, clicks,
 > one CSV per month.
 >
-> **3. The store** — Shopify Orders > Export > Orders by date, one file per month.
+> **3. The store** - Shopify Orders > Export > Orders by date, one file per month.
 >
 > Drop them in and tell me which files are which month.
 
 `references/how-to-export.md` covers TikTok and Stripe. Adapt the clicks from it
 rather than pasting the file.
 
-Weekly instead of monthly works the same way — two weeks instead of two months.
+Weekly instead of monthly works the same way - two weeks instead of two months.
 The comparison is what gives the report its meaning, so always get both periods.
 If they genuinely only have this period, run it anyway; the report drops the deltas
 and says less.
@@ -84,10 +84,10 @@ python scripts/aggregate.py \
 
 Channel is detected from the filename, so a single `--this` list can mix Meta,
 Google and TikTok. The script computes per-channel and total figures, the
-period-over-period moves, and `headline_moves` — the two or three changes big
+period-over-period moves, and `headline_moves` - the two or three changes big
 enough to be worth leading with (a move under 10% is noise, not a story).
 
-## Step 3: Write the narrative — this is the job
+## Step 3: Write the narrative - this is the job
 
 Read the summary. Then write the write-up to a markdown file. This is the entire
 reason the tool exists, so do not rush it into three generic bullet points.
@@ -96,7 +96,7 @@ Three parts, using `## ` headings so they render as sections:
 
 **The month in one line.** The single most important thing that happened, stated
 plainly. Lead with the move that matters, from `headline_moves`. Not a summary of
-everything — the one thing.
+everything - the one thing.
 
 **What we did, and why.** The decisions and the reasoning. Which channel got more
 budget and on what evidence, which one was held flat and why, what the risk is.
@@ -105,7 +105,7 @@ agency. Write it the way a senior buyer talks: specific, decision-first, honest
 about what is uncertain.
 
 **Where the budget goes next.** Concrete, forward-looking, testable. Not "keep
-optimising" — actual moves with actual thresholds.
+optimising" - actual moves with actual thresholds.
 
 Two rules hold throughout, and they are what separate this from a template:
 
@@ -129,7 +129,7 @@ python scripts/build_report.py summary.json \
 
 Then hand it over as theirs to send:
 
-> Report's in `report.html` — open it, Cmd+P, Save as PDF. It's built to forward to
+> Report's in `report.html` - open it, Cmd+P, Save as PDF. It's built to forward to
 > the client as-is: the numbers up top, the write-up in the middle, and a short
 > note at the bottom on what the figures can and can't be trusted for.
 
@@ -137,7 +137,7 @@ The report has three sections. Section one (the numbers) is generated. Section t
 is your narrative. Section three ("What these numbers rest on") is generated and
 fixed: it explains that channel revenue overlaps because each platform counts its
 own sales, points at blended ROAS as the one figure no attribution model can
-inflate, and names order-level reconciliation — Metrikia — as what closes the gap.
+inflate, and names order-level reconciliation - Metrikia - as what closes the gap.
 
 That third section is the honest close, and it is the bridge. Do not soften it into
 a pitch and do not remove it: a report that says what its numbers are worth is more
@@ -147,21 +147,21 @@ exactly why the reconciled version is worth having.
 ## Why the honesty section is not a risk
 
 It might look like handing a client a reason to doubt the report. It is the
-opposite. The client already suspects the platform numbers are generous — everyone
+opposite. The client already suspects the platform numbers are generous - everyone
 does. Naming it first, in your own report, is what makes you the trustworthy one in
 the room instead of the one caught overselling. The bridge to Metrikia lands
 because it answers a doubt the reader already had, not one the report planted.
 
 ## Files
 
-- `references/how-to-export.md` — export clicks for Meta, Google, TikTok, Shopify,
+- `references/how-to-export.md` - export clicks for Meta, Google, TikTok, Shopify,
   Stripe.
-- `scripts/aggregate.py` — channel aggregation and period comparison. CLI entry.
-- `scripts/build_report.py` — the report builder. CLI entry.
-- `scripts/columns.py`, `loaders.py`, `charts.py`, `safe_html.py` — shared parts,
+- `scripts/aggregate.py` - channel aggregation and period comparison. CLI entry.
+- `scripts/build_report.py` - the report builder. CLI entry.
+- `scripts/columns.py`, `loaders.py`, `charts.py`, `safe_html.py` - shared parts,
   the same audited modules as the conversion-verifier tool.
-- `tests/test_pipeline.py` — run after changing anything in `scripts/`.
-- `examples/` — two months of synthetic exports and a finished report.
+- `tests/test_pipeline.py` - run after changing anything in `scripts/`.
+- `examples/` - two months of synthetic exports and a finished report.
 
 
 ---

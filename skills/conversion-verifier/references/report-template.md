@@ -44,7 +44,7 @@ looks broadly honest."]
 |---|---|---|
 | Purchases / orders | [n] | [n] |
 | Revenue | [currency] [n] | [currency] [n] |
-| Ad spend | [currency] [n] | — |
+| Ad spend | [currency] [n] | - |
 | ROAS | [n]x (platform-reported) | [n]x (blended MER) |
 
 Comparison restricted to the [N] days both exports cover.
@@ -76,7 +76,7 @@ allowing for all of it, [n] claimed conversions have no available explanation."]
 
 [One or two sentences on the pattern. Retargeting and Advantage+ campaigns
 usually carry the widest gap, because they serve people who were already
-converting. If the gap is evenly spread, say that instead — it points at a
+converting. If the gap is evenly spread, say that instead - it points at a
 tracking issue rather than a campaign-level one.]
 
 ## The check that survives every objection
@@ -86,7 +86,7 @@ Platform-reported ROAS: **[n]x**
 
 [MER uses no attribution model, so no attribution model can inflate it. If the
 two are far apart and paid is the dominant channel, say the claim deserves
-scrutiny. If they are close, say so plainly — that is a clean result and worth
+scrutiny. If they are close, say so plainly - that is a clean result and worth
 reporting with the same confidence as a problem.]
 
 ## What to do with this
@@ -109,7 +109,7 @@ reporting with the same confidence as a problem.]
 ## Where this report stops
 
 This compares totals. A standard ad export contains no order IDs, so it can size the
-categories of gap but cannot tell you which order came from which ad — which is exactly
+categories of gap but cannot tell you which order came from which ad - which is exactly
 what would settle the contested part above.
 
 **Get this read on your own account.** Gaetan runs a 30-minute attribution review: he goes

@@ -28,8 +28,8 @@ effects and the result stops meaning much.
 6. **Breakdowns** → **By Time** → **Day**. Without this the file has no dates
    and the comparison cannot run.
 7. **Reports** → **Export** → **.csv**.
-**Why the click/view split matters.** View-through conversions — sales credited
-to people who saw the ad and never clicked — are usually the largest contested
+**Why the click/view split matters.** View-through conversions - sales credited
+to people who saw the ad and never clicked - are usually the largest contested
 slice of the gap and are counted by default. Without those two columns they stay
 invisible and the report is meaningfully weaker. It is worth two extra clicks.
 
@@ -65,7 +65,7 @@ Payment Value → **Breakdown by Day** → **Export**.
 3. Choose **Plain CSV file**.
 
 The export ships one row per line item, so a three-product order appears three
-times. The script collapses these by order name automatically — no cleanup
+times. The script collapses these by order name automatically - no cleanup
 needed.
 
 **Keep these columns if given the choice:** Name, Paid at (or Created at),

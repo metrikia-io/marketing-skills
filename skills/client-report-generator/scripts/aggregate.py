@@ -2,7 +2,7 @@
 """
 Aggregate ad exports by channel, this period against last, and pull out what moved.
 
-The manual work this replaces is not making charts — Looker already does that. It
+The manual work this replaces is not making charts - Looker already does that. It
 is the two things a person does by hand after the charts exist: comparing this
 month to last and writing what changed and why. This module does the first half
 (compute what moved); the model does the second (say what it means). Splitting it
@@ -152,7 +152,7 @@ def build_summary(args):
     # a blank report that looks authoritative.
     if totals_now["spend"] == 0 and totals_now["purchases"] == 0:
         raise ValueError(
-            "Every ad figure came out zero — the export columns were not recognized "
+            "Every ad figure came out zero - the export columns were not recognized "
             "(a report title preamble, or the wrong file). Check the ad exports.")
 
     return _summary_dict(args, this_channels, last_channels, totals_now,

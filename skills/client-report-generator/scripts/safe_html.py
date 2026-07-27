@@ -7,8 +7,8 @@ it a delivery vehicle: anything that reaches the page and is not escaped runs in
 the recipient's browser, not the author's. The untrusted inputs are the ad and
 store exports (campaign names, referrers), the account name passed on the command
 line, and the narrative markdown. A campaign literally named
-`<script>...</script>` — whether by accident or by someone who wants to reach the
-agency's client through the agency — must render as text, never execute.
+`<script>...</script>` - whether by accident or by someone who wants to reach the
+agency's client through the agency - must render as text, never execute.
 
 The rule is one-directional and absolute: escape at the point of insertion into
 HTML, never trust that a value was clean upstream.

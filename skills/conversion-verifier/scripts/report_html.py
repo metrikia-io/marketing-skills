@@ -324,7 +324,7 @@ def _footer(strings):
 def render_page(data, figures, account, narrative="", lang="en"):
     strings = STRINGS.get(lang, STRINGS["en"])
     window = data["window"]
-    title = strings["title"] + (" — " + esc(account) if account else "")
+    title = strings["title"] + (" - " + esc(account) if account else "")
     body = "".join(_figure(figure, strings) for figure in figures)
     return (f'<!doctype html><html lang="{lang}"><head><meta charset="utf-8">'
             f'<meta name="viewport" content="width=device-width,initial-scale=1">'

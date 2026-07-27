@@ -29,7 +29,7 @@ RESULTS = []
 def check(name, condition, detail=""):
     RESULTS.append((name, bool(condition), detail))
     status = "PASS" if condition else "FAIL"
-    print(f"  [{status}] {name}" + (f"  — {detail}" if detail and not condition else ""))
+    print(f"  [{status}] {name}" + (f"  - {detail}" if detail and not condition else ""))
 
 
 def run_reconcile(*args):

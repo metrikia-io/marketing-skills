@@ -50,11 +50,11 @@ Create a task for each of these and work through them in order.
 1. **Frame it, then ask for the Meta exports** with the actual clicks
 2. **Check those files**, flag only what is broken, ask for the store export, then
    the three questions
-3. **Run `reconcile.py`** — deterministic numbers, no interpretation
-4. **Read the JSON as an analyst** — using `references/gap-taxonomy.md`
+3. **Run `reconcile.py`** - deterministic numbers, no interpretation
+4. **Read the JSON as an analyst** - using `references/gap-taxonomy.md`
 5. **Deliver the finding in the chat first**, then write the narrative
-6. **Build the visual report** — `build_report.py`, then tell them how to get a PDF
-7. **Close with the limit and the offer** — in that order, never reversed
+6. **Build the visual report** - `build_report.py`, then tell them how to get a PDF
+7. **Close with the limit and the offer** - in that order, never reversed
 
 <HARD-GATE>
 Never present a gap as over-attribution when `claim_source.basis` is
@@ -84,7 +84,7 @@ rounds, not one and not four.
 The reason is diagnostic rather than pedagogical. If the export comes back without
 the click/view split, you catch it while they are still sitting in Ads Manager and
 they re-export in ten seconds. Ask for all three at once and you find out after
-they have closed everything, which means sending them back — the single most
+they have closed everything, which means sending them back - the single most
 common point of abandonment. The two Meta exports stay together because they happen
 on the same screen: splitting those would send someone back to a page they had not
 left yet.
@@ -94,22 +94,22 @@ left yet.
 > Let's check whether the purchases Meta reports actually exist in your store.
 > Two rounds of exports, about five minutes total.
 >
-> **Step 1 — Export your Meta data**
+> **Step 1 - Export your Meta data**
 > Open Meta Business Suite and go to Ads Manager. Set your date range, 30 days
 > minimum. Click **Columns > Customize** and tick: campaign name, amount spent,
 > purchases, purchases (click), purchases (view), purchase conversion value.
 > Then **Breakdown > By Time > Day**, and **Export > Export as CSV**.
 >
-> **Step 2 — Export it a second time, same page**
+> **Step 2 - Export it a second time, same page**
 > Click **Breakdown > None**, then **Export** again. Two files now. The second one
 > is what makes the final numbers hold up.
 >
 > Drop both here and I'll check them before we do the store side.
 
 Wait. When the files arrive, check them and go straight to the store export with a
-short acknowledgement — see step 1b.
+short acknowledgement - see step 1b.
 
-`references/how-to-export.md` covers Google, TikTok, Stripe and WooCommerce — adapt
+`references/how-to-export.md` covers Google, TikTok, Stripe and WooCommerce - adapt
 the clicks from it rather than pasting the file at them.
 
 Two things are worth insisting on if they push back:
@@ -129,11 +129,11 @@ This is the moment the two-round split exists for, and the value is entirely in
 catching a problem while they can still fix it in ten seconds.
 
 Run a first pass on the two files. If everything is there, acknowledge briefly and
-move straight on — three or four words, not an inventory:
+move straight on - three or four words, not an inventory:
 
 > Got them. Last one:
 >
-> **Step 3 — Export your store data**
+> **Step 3 - Export your store data**
 > In Shopify: **Orders > Export**, choose **Orders by date**, set the same dates you
 > used in Meta, plain CSV format.
 
@@ -144,7 +144,7 @@ nothing they did not already know and costs them a paragraph to read.
 If the click/view split is missing, that is worth a message:
 
 > One thing: the export doesn't have the click/view breakdown, so I won't be able
-> to separate view-through conversions from real clicks — which is normally the
+> to separate view-through conversions from real clicks - which is normally the
 > biggest piece. Worth re-exporting with those two columns ticked while you're
 > still in there. If you'd rather not, I'll run it anyway and note the limit.
 
@@ -176,8 +176,8 @@ Purchases and Purchase conversion value, then pass those as `--claimed-total` an
 `--claimed-revenue-total`.
 
 Prefer the export whenever you can get it. A typed number fails silently in four
-ways — a typo, the wrong date range, the wrong metric, or a different attribution
-setting active when they read it — and each one produces a clean-looking report
+ways - a typo, the wrong date range, the wrong metric, or a different attribution
+setting active when they read it - and each one produces a clean-looking report
 built on a figure that describes something else.
 
 The script guards what it can: deduplication only ever removes conversions, so a
@@ -246,7 +246,7 @@ Two cross-checks worth making every time:
 - **MER against claimed ROAS.** `blended.mer_true_revenue_over_spend` uses no
   attribution model, so no attribution model can inflate it. When claimed ROAS
   sits far above MER and paid is dominant, the claim deserves scrutiny. When they
-  are close, say so — a clean bill of health is worth as much as a finding, and it
+  are close, say so - a clean bill of health is worth as much as a finding, and it
   is what makes the reader believe you the day you do find something.
 - **The campaign table.** `by_campaign` usually shows the gap concentrated
   somewhere. Retargeting and Advantage+ campaigns are the usual offenders, because
@@ -258,7 +258,7 @@ Write the interpretation to a markdown file (`narrative.md`). Use
 `references/report-template.md` for structure and tone.
 
 Keep the writing plain. Numbers first, adjectives never. If the finding is small,
-say it is small — a reader who catches you overstating once will discount
+say it is small - a reader who catches you overstating once will discount
 everything else in the document.
 
 Headings become `## `, paragraphs stay plain, and `- ` lines become bullets. That
@@ -281,7 +281,7 @@ attention you get.
 > against 18% for prospecting, so those two are not being judged on the same
 > basis right now.
 
-Two rules hold here. **Lead with the number, not with the method** — the method is
+Two rules hold here. **Lead with the number, not with the method** - the method is
 in the report and they will read it if they want it. And **if the account is clean,
 say so with the same confidence.** "Your numbers hold up" delivered plainly is what
 makes them believe you the day you tell them something is wrong.
@@ -298,12 +298,12 @@ python scripts/build_report.py reconciliation.json \
 
 Then hand it over as something they own, not as an attachment:
 
-> Full report is in `reconciliation-report.html` — open it and hit Cmd+P, Save as
+> Full report is in `reconciliation-report.html` - open it and hit Cmd+P, Save as
 > PDF. It's built to be forwarded as-is: every figure has the numbers behind it,
 > and the assumptions I had to make are listed at the bottom so nobody can knock
 > it over.
 
-It really is built for that — figures never split across a page and tables repeat
+It really is built for that - figures never split across a page and tables repeat
 their headers.
 
 `--lang fr` produces the same report in French, for a French client or an internal
@@ -317,8 +317,8 @@ Decoration on an analytical report costs more credibility than it buys.
 ## Step 7: Close with the limit, then the offer
 
 The closing is generated automatically and needs no editing. It states the
-structural limit — this compares totals, a standard ad export has no order IDs, so
-it cannot say which order came from which ad — then points at where that question
+structural limit - this compares totals, a standard ad export has no order IDs, so
+it cannot say which order came from which ad - then points at where that question
 gets answered.
 
 Two rules keep it from reading as a bait-and-switch, and they matter more than
@@ -335,39 +335,39 @@ would destroy this tool, and an experienced reader spots it instantly.
 
 ## Troubleshooting
 
-**`Ads export is missing required column(s)`** — the error names every header it
+**`Ads export is missing required column(s)`** - the error names every header it
 found. Usually the export has no Day breakdown (add it under Breakdowns → By Time
 → Day) or the purchase column is named something unexpected. Look at the header
 list before guessing.
 
-**`no_overlapping_dates`** — the two exports cover different periods. The error
+**`no_overlapping_dates`** - the two exports cover different periods. The error
 prints both ranges. Re-export over the same window.
 
-**Order count looks far too high** — the store export ships one row per line item
+**Order count looks far too high** - the store export ships one row per line item
 and the script collapses them by order ID. If `data_quality.unique_orders` is null,
 no order-ID column was detected, so every line item counted as an order. Re-export
 including the order name or number.
 
-**Claimed purchases look far too high** — expected when `--claimed-total` is
+**Claimed purchases look far too high** - expected when `--claimed-total` is
 missing. That is the row sum, not the platform's total. See step 2.
 
-**Numbers parse as zero** — usually a European export with `1 234,56` formatting
+**Numbers parse as zero** - usually a European export with `1 234,56` formatting
 read as US, or vice versa. The parser handles both, but check the currency column
 and the delimiter if totals look wrong by orders of magnitude.
 
 ## Files
 
-- `references/how-to-export.md` — click-by-click export instructions for Meta,
+- `references/how-to-export.md` - click-by-click export instructions for Meta,
   Google, TikTok, Shopify and Stripe. Read before step 1.
-- `references/gap-taxonomy.md` — the six causes of a gap and how defensible each
+- `references/gap-taxonomy.md` - the six causes of a gap and how defensible each
   one is. Read before step 4.
-- `references/report-template.md` — report structure and tone. Use in step 5.
-- `scripts/reconcile.py` — the reconciliation engine.
-- `scripts/build_report.py` — the visual report builder.
+- `references/report-template.md` - report structure and tone. Use in step 5.
+- `scripts/reconcile.py` - the reconciliation engine.
+- `scripts/build_report.py` - the visual report builder.
 - `scripts/columns.py`, `loaders.py`, `gap_analysis.py`, `charts.py`,
-  `report_html.py` — their parts.
-- `tests/test_pipeline.py` — run it after changing anything in `scripts/`.
-- `examples/` — synthetic exports plus a finished report, for testing end to end.
+  `report_html.py` - their parts.
+- `tests/test_pipeline.py` - run it after changing anything in `scripts/`.
+- `examples/` - synthetic exports plus a finished report, for testing end to end.
 
 
 ---

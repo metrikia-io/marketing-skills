@@ -1,6 +1,6 @@
 # Client Report Generator
 
-**Turn a month of ad exports into a client-ready report — numbers, a written
+**Turn a month of ad exports into a client-ready report - numbers, a written
 explanation of what changed and why, and an honest note on what the numbers can be
 trusted for.**
 
@@ -20,7 +20,7 @@ it for free.
 The manual work is not the charts. It is the two things a person does after the
 charts exist: comparing this month to last, and **writing what changed and why in
 language a client understands.** The second is what a client pays an agency for,
-and it is the part this tool is built to produce well — the write-up reads like a
+and it is the part this tool is built to produce well - the write-up reads like a
 senior media buyer wrote it, because it is written from the actual figures.
 
 ---
@@ -58,12 +58,12 @@ the report.
 
 ## What you need
 
-Two months of exports — the reporting period and the one before it — so the report
+Two months of exports - the reporting period and the one before it - so the report
 can show what changed.
 
-- **Ad channels** — Meta, Google and/or TikTok, one CSV per channel per month. The
+- **Ad channels** - Meta, Google and/or TikTok, one CSV per channel per month. The
   channel is detected from the filename, so one command can mix platforms.
-- **Store** — Shopify orders or Stripe payments, one CSV per month.
+- **Store** - Shopify orders or Stripe payments, one CSV per month.
 
 Weekly reporting works the same way: two weeks instead of two months.
 
@@ -76,11 +76,11 @@ Export clicks for every platform:
 
 A three-section report, built to forward to a client without editing:
 
-1. **What happened** — spend, revenue, blended ROAS and orders, each with its
+1. **What happened** - spend, revenue, blended ROAS and orders, each with its
    change against last period; a per-channel table; a channel ROAS chart.
-2. **What we did, and why** — the written analysis. Generated from the numbers when
+2. **What we did, and why** - the written analysis. Generated from the numbers when
    run through Claude Code, or write it yourself and pass it with `--narrative`.
-3. **What these numbers rest on** — a short, honest note: channel revenue overlaps
+3. **What these numbers rest on** - a short, honest note: channel revenue overlaps
    because each platform counts its own sales, blended ROAS is the one figure no
    attribution model can inflate, and order-level reconciliation is what closes the
    gap.
@@ -94,7 +94,7 @@ you the trustworthy one in the room.
 ## What it does not do
 
 It reports what the platforms claim, per channel, and how that moved. It does not
-tell you which specific sale came from which specific ad — channel revenue overlaps
+tell you which specific sale came from which specific ad - channel revenue overlaps
 and adds up to more than the store took, which the report says plainly. Closing
 that needs order-level attribution reconciled against money actually collected,
 which is what [Metrikia](https://metrikia.io/) does.
@@ -118,4 +118,4 @@ the conversion-verifier tool and carry its audit.
 
 ## License
 
-MIT — use it, fork it, ship it inside your own tooling.
+MIT - use it, fork it, ship it inside your own tooling.

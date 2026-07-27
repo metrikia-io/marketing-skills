@@ -7,10 +7,10 @@ to a client should not have to install anything to produce it.
 
 The report has three sections, in the order that matters to the reader:
 
-  1. What happened     — the numbers, this period against last
-  2. What we did        — the narrative, written from those numbers (the part a
+  1. What happened     - the numbers, this period against last
+  2. What we did        - the narrative, written from those numbers (the part a
                           person writes by hand today)
-  3. What it rests on    — how much of the reported performance can be trusted,
+  3. What it rests on    - how much of the reported performance can be trusted,
                           which is the honest note nobody else includes
 
 Section 2 is the whole point. Looker already draws section 1. The work being
@@ -104,7 +104,7 @@ def _rests_on(store):
         'caused, and those counts overlap, so channel revenue adds up to more than the '
         f'store actually took.{refund_line} Blended ROAS is the one figure here that no '
         'attribution model can inflate, because it compares total store revenue to total '
-        'spend — trust it first.</p>'
+        'spend - trust it first.</p>'
         '<p>To credit each channel against the cash actually collected in Stripe and the '
         'CRM, rather than against what the platform says about its own work, the numbers '
         'have to be reconciled at the order level. That is what '
@@ -153,7 +153,7 @@ def render(summary, account, narrative):
         subtitle += f' vs {period["compared_to"]}'
     channels = summary["channels"]
     body = "".join([
-        f'<h1>Performance report{" — " + esc(account) if account else ""}</h1>',
+        f'<h1>Performance report{" - " + esc(account) if account else ""}</h1>',
         f'<div class="meta">{esc(subtitle)}</div>',
         '<h2>What happened</h2>',
         _tiles(summary["totals"], summary.get("store")),
@@ -161,12 +161,12 @@ def render(summary, account, narrative):
         f'<table>{_channel_table(channels)}</table>',
         '<h2>What we did, and why</h2>',
         narrative_to_html(narrative) or
-        '<p style="color:#898781">[Narrative goes here — written from the numbers above.]</p>',
+        '<p style="color:#898781">[Narrative goes here - written from the numbers above.]</p>',
         _rests_on(summary.get("store")),
     ])
     return (f'<!doctype html><html lang="en"><head><meta charset="utf-8">'
             f'<meta name="viewport" content="width=device-width,initial-scale=1">'
-            f'<title>Performance report{" — " + esc(account) if account else ""}</title>'
+            f'<title>Performance report{" - " + esc(account) if account else ""}</title>'
             f'<style>{STYLES}</style></head><body>{body}</body></html>')
 
 

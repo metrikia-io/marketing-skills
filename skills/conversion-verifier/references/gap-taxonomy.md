@@ -16,7 +16,7 @@ affiliate, SMS and everything else. The ad platform only claims a subset.
 
 **Why it matters here.** It means store total > platform claim is the *normal*
 state. Comparing a platform's claimed purchases against the store TOTAL is
-therefore the friendliest possible benchmark for that platform — you are letting
+therefore the friendliest possible benchmark for that platform - you are letting
 it take credit for every sale from every channel.
 
 **The consequence that makes this the sharpest test available.** If claimed
@@ -41,7 +41,7 @@ distorted zone at the edges. Over a 7-day window it is 100% and the comparison
 is close to meaningless.
 
 **What to do.** Never run this on a short window and present it as conclusive.
-The script sizes the effect in `gap_breakdown[].estimated_max_share` — quote it
+The script sizes the effect in `gap_breakdown[].estimated_max_share` - quote it
 rather than ignoring it.
 
 ---
@@ -83,7 +83,7 @@ default under its 1-day view setting.
 **Size.** Commonly 10 to 30% of claimed purchases. Retargeting campaigns run far
 higher, because they serve ads to people who were already going to buy.
 
-**Why it is contested rather than legitimate.** The mechanism is real —
+**Why it is contested rather than legitimate.** The mechanism is real -
 impressions do influence people. But the platform is grading its own homework on
 a claim it cannot substantiate, and the counterfactual is untested: many of
 those buyers were converting regardless. This is the single largest lever a
@@ -91,7 +91,7 @@ platform has to inflate its own numbers, and it is enabled by default.
 
 **How to handle it.** If the export includes the click/view split, report the
 measured share and let it speak. If not, say it could not be measured and give
-the typical range — do not invent a figure for this account.
+the typical range - do not invent a figure for this account.
 
 ---
 
@@ -114,7 +114,7 @@ path to it will not.
 
 ## The cross-check that survives every objection
 
-Blended MER — total store revenue divided by total ad spend — uses no
+Blended MER - total store revenue divided by total ad spend - uses no
 attribution model at all. Nothing in this taxonomy can distort it.
 
 When claimed ROAS sits far above MER and paid is the dominant channel, the
