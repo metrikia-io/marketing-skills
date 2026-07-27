@@ -150,10 +150,22 @@ def parse_args():
     return parser.parse_args()
 
 
+def _load_json(path):
+    try:
+        with open(path, encoding="utf-8") as handle:
+            return json.load(handle)
+    except OSError as error:
+        print(f"Could not open {path}: {error}", file=sys.stderr)
+    except json.JSONDecodeError as error:
+        print(f"{path} is not valid JSON (run reconcile.py first): {error}", file=sys.stderr)
+    return None
+
+
 def main():
     args = parse_args()
-    with open(args.json_path, encoding="utf-8") as handle:
-        data = json.load(handle)
+    data = _load_json(args.json_path)
+    if data is None:
+        return 1
     if "error" in data:
         print(f"Reconciliation failed: {data.get('message')}", file=sys.stderr)
         return 1

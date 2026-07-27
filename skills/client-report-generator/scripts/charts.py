@@ -26,7 +26,8 @@ GAP = 2  # surface gap between stacked segments, never a border
 
 
 def _esc(text):
-    return (str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
+    return (str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            .replace('"', "&quot;").replace("'", "&#x27;"))
 
 
 def _text(x, y, content, size=11, fill=INK_2, anchor="start", weight="400"):
@@ -90,7 +91,9 @@ def roas_chart(values, width=640):
     """
     bar_w, gap, left, top, plot_h = 96, 56, 8, 24, 150
     height = top + plot_h + 54
-    ceiling = max(item["value"] for item in values) * 1.18
+    # `or 1` guards the all-zero case (a channel with spend but no revenue), which
+    # would otherwise divide by a zero ceiling and crash report generation.
+    ceiling = (max(item["value"] for item in values) or 0) * 1.18 or 1
     parts = [_open(width, height)]
     parts.extend(_gridlines(width, top, plot_h, ceiling, suffix="x"))
     for index, item in enumerate(values):

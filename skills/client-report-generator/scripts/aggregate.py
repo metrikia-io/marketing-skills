@@ -19,37 +19,55 @@ import argparse
 import json
 import sys
 
-from columns import ADS_PATTERNS, detect_columns, parse_number, read_csv_rows
+from columns import (ADS_PATTERNS, detect_columns, is_total_row, parse_number,
+                     read_csv_rows)
 from loaders import load_orders
 
 # A change smaller than this is noise, not a story. Reported, never narrated.
 MATERIAL_MOVE = 0.10
 
+CHANNEL_KEYWORDS = {
+    "Google": ("google", "gads", "adwords"),
+    "TikTok": ("tiktok", "ttk"),
+    "Meta": ("meta", "facebook", "insta"),
+}
+
 
 def channel_of(path):
-    """Name the channel from the file, so one --this list can mix platforms."""
+    """Name the channel from the filename, erroring on an ambiguous or unknown one.
+
+    A silent wrong guess files one platform's spend under another, which corrupts a
+    client-facing report. Better to stop and ask the user to rename the file.
+    """
     name = path.lower()
-    if "google" in name or "gads" in name or "adwords" in name:
-        return "Google"
-    if "tiktok" in name or "ttk" in name:
-        return "TikTok"
-    if "meta" in name or "facebook" in name or "fb" in name or "insta" in name:
-        return "Meta"
-    return "Other"
+    matches = [channel for channel, keywords in CHANNEL_KEYWORDS.items()
+               if any(word in name for word in keywords)]
+    if len(matches) == 1:
+        return matches[0]
+    if len(matches) > 1:
+        raise ValueError(
+            f"'{path}' matches more than one platform ({', '.join(matches)}). "
+            "Rename it so the filename names a single platform.")
+    raise ValueError(
+        f"Could not tell which platform '{path}' is from. Put the platform name "
+        "(meta, google, tiktok) in the filename.")
 
 
 def load_channel(path):
-    """Sum an ad export to channel totals. Day breakdown optional here: we want totals."""
+    """Sum an ad export to channel totals, skipping any appended Total row."""
     rows = read_csv_rows(path)
     columns = detect_columns(rows[0].keys(), ADS_PATTERNS)
+    if "spend" not in columns and "purchases" not in columns:
+        raise ValueError(
+            f"'{path}' has no recognizable spend or conversion column. "
+            f"Detected: {columns}. Headers: {list(rows[0].keys())}")
     totals = {"spend": 0.0, "purchases": 0.0, "revenue": 0.0, "clicks": 0.0,
               "impressions": 0.0}
     for row in rows:
-        totals["spend"] += _num(row, columns, "spend")
-        totals["purchases"] += _num(row, columns, "purchases")
-        totals["revenue"] += _num(row, columns, "revenue")
-        totals["clicks"] += _num(row, columns, "clicks")
-        totals["impressions"] += _num(row, columns, "impressions")
+        if is_total_row(row, columns):
+            continue
+        for field in totals:
+            totals[field] += _num(row, columns, field)
     return totals
 
 
@@ -129,6 +147,21 @@ def build_summary(args):
     totals_now = _sum_channels(this_channels)
     totals_before = _sum_channels(last_channels) if last_channels else None
 
+    # A report where every number is zero means detection failed (a preamble, the
+    # wrong file), not a real zero-spend month. Refuse it rather than send a client
+    # a blank report that looks authoritative.
+    if totals_now["spend"] == 0 and totals_now["purchases"] == 0:
+        raise ValueError(
+            "Every ad figure came out zero — the export columns were not recognized "
+            "(a report title preamble, or the wrong file). Check the ad exports.")
+
+    return _summary_dict(args, this_channels, last_channels, totals_now,
+                         totals_before, orders, orders_last)
+
+
+def _summary_dict(args, this_channels, last_channels, totals_now, totals_before,
+                  orders, orders_last):
+    channels = compare_channels(this_channels, last_channels)
     return {
         "period": {"label": args.label or "This period",
                    "compared_to": args.label_last or ("Last period" if last_channels else None)},
@@ -137,9 +170,9 @@ def build_summary(args):
             "last": derived(totals_before) if totals_before else None,
             "moves": _moves(derived(totals_now), derived(totals_before)) if totals_before else None,
         },
-        "channels": compare_channels(this_channels, last_channels),
+        "channels": channels,
         "store": _store_section(orders, orders_last),
-        "headline_moves": _headline(compare_channels(this_channels, last_channels)),
+        "headline_moves": _headline(channels),
     }
 
 

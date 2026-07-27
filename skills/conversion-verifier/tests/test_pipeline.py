@@ -264,12 +264,60 @@ def test_escaping_preserves_formatting():
           "<strong>&lt;script&gt;" in evil and "<script>" not in evil)
 
 
+def test_eu_number_and_total_row():
+    """European number formats and a trailing Total row must not corrupt totals."""
+    print("\nEU numbers and total-row guard")
+    from columns import parse_number
+    from loaders import load_ads
+    cases = [("1.234", 1234.0), ("1,234", 1234.0), ("1,23", 1.23),
+             ("1.234,56", 1234.56), ("(1,234)", -1234.0)]
+    for raw, expected in cases:
+        check(f"parse_number({raw!r}) == {expected}",
+              abs(parse_number(raw) - expected) < 0.01, f"got {parse_number(raw)}")
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "meta.csv"
+        path.write_text(
+            "Campaign name,Day,Amount spent (USD),Purchases,Purchases conversion value\n"
+            "Prospecting,2026-06-01,100,10,1000\nProspecting,2026-06-02,100,10,1000\n"
+            "Total,,200,20,2000\nTotal,2026-06-02,200,20,2000\n")
+        ads = load_ads(str(path))
+    total_purchases = sum(day["purchases"] for day in ads["daily"].values())
+    check("total rows (dated and undated) are skipped", total_purchases == 20.0,
+          f"got {total_purchases}")
+    check("no phantom Total campaign", "Total" not in ads["by_campaign"])
+
+
+def test_sanity_check_uses_full_row_sum():
+    """A legit total must not be blocked when orders cover fewer days than ads."""
+    print("\nSanity check against full row sum")
+    from loaders import load_ads, load_orders
+    from reconcile import reconcile
+    with tempfile.TemporaryDirectory() as tmp:
+        ads_path = Path(tmp) / "meta.csv"
+        rows = ["Campaign,Day,Amount spent,Purchases,Purchases conversion value"]
+        for day in range(1, 11):  # 10 days, 10 purchases each -> full row sum 100
+            rows.append(f"P,2026-06-{day:02d},100,10,1000")
+        ads_path.write_text("\n".join(rows) + "\n")
+        orders_path = Path(tmp) / "orders.csv"
+        order_rows = ["Name,Paid at,Total"]
+        for day in range(1, 4):  # orders cover only 3 of the 10 days
+            order_rows.append(f"#{day},2026-06-{day:02d} 12:00:00,90")
+        orders_path.write_text("\n".join(order_rows) + "\n")
+        result = reconcile(load_ads(str(ads_path)), load_orders(str(orders_path)),
+                           {"claimed_total": 80})  # 80 <= full sum 100, legal
+    check("legit total is not falsely blocked",
+          result["claim_source"]["reliable"] is True,
+          f'sanity={result["claim_source"].get("sanity")}')
+
+
 def main():
     print("conversion-verifier test suite")
     for suite in (test_dedup_guard, test_parsing, test_line_item_dedup,
                   test_window_handling, test_missing_split_drops_chart,
                   test_report_build, test_html_injection,
-                  test_escaping_preserves_formatting):
+                  test_escaping_preserves_formatting,
+                  test_eu_number_and_total_row,
+                  test_sanity_check_uses_full_row_sum):
         suite()
     failed = [name for name, ok, _ in RESULTS if not ok]
     print(f"\n{len(RESULTS) - len(failed)}/{len(RESULTS)} passed")

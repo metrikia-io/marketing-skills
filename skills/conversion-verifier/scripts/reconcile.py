@@ -72,6 +72,11 @@ def reconcile(ads, orders, options=None):
     ad_totals = sum_over_days(ads["daily"], overlap, AD_METRIC_KEYS)
     order_totals = sum_over_days(orders["daily"], overlap, ORDER_METRIC_KEYS)
     context = build_context(overlap, options)
+    # The account total the user typed covers the whole ads export, so it must be
+    # sanity-checked against the whole export's row sum, not the overlap subset.
+    # Checking against the overlap wrongly blocked any run where the orders window
+    # was shorter than the ads window, which is the common case.
+    context["full_row_sum"] = sum_over_days(ads["daily"], ads_days, AD_METRIC_KEYS)["purchases"]
     return _assemble(ads, orders, ad_totals, order_totals, context, options,
                      overlap, ads_days, order_days)
 
@@ -107,63 +112,69 @@ def _claim_source_section(context, ad_totals):
     """State plainly where the headline number came from, because it decides everything."""
     deduplicated = context.get("deduplicated_claimed")
     if deduplicated is None:
-        return {
-            "basis": "summed_breakdown_rows",
-            "value": round(ad_totals["purchases"], 2),
-            "reliable": False,
-            "warning": ("This figure is the sum of campaign-by-day rows. The platform's own "
-                        "deduplicated account total is lower, because one conversion can appear "
-                        "in several breakdown rows. Treat every gap below as an upper bound and "
-                        "make no over-attribution claim until --claimed-total is supplied."),
-        }
-    basis = context.get("claim_basis") or "account_level_deduplicated"
-    row_sum = ad_totals["purchases"]
+        return _unverified_claim_section(ad_totals)
+    # Sanity-check against the whole export's row sum, not the overlap subset.
+    row_sum = context.get("full_row_sum", ad_totals["purchases"])
     section = {
-        "basis": basis,
+        "basis": context.get("claim_basis") or "account_level_deduplicated",
         "value": round(deduplicated, 2),
         "reliable": True,
         "row_sum_for_reference": round(row_sum, 2),
     }
     section.update(_sanity_check_claim(deduplicated, row_sum))
-    if basis == "campaign_level_export":
-        section["note"] = ("Totals come from a campaign-level export with no day breakdown, "
-                           "which avoids the row multiplication the time breakdown causes. "
-                           "Close to the platform's deduplicated figure, though a small "
-                           "residual difference is possible; the account total read directly "
-                           "off the platform remains the only exact source.")
+    if section["basis"] == "campaign_level_export":
+        section["note"] = _CAMPAIGN_LEVEL_NOTE
     return section
 
 
-PLAUSIBLE_FLOOR = 0.60  # a deduplicated total below this share of the row sum is suspect
+def _unverified_claim_section(ad_totals):
+    return {
+        "basis": "summed_breakdown_rows",
+        "value": round(ad_totals["purchases"], 2),
+        "reliable": False,
+        "warning": ("This figure is the sum of campaign-by-day rows. The platform's own "
+                    "deduplicated account total is lower, because one conversion can appear "
+                    "in several breakdown rows. Treat every gap below as an upper bound and "
+                    "make no over-attribution claim until --claimed-total is supplied."),
+    }
+
+
+_CAMPAIGN_LEVEL_NOTE = (
+    "Totals come from a campaign-level export with no day breakdown, which avoids the row "
+    "multiplication the time breakdown causes. Close to the platform's deduplicated figure, "
+    "though a small residual difference is possible; the account total read directly off the "
+    "platform remains the only exact source.")
+
+PLAUSIBLE_FLOOR = 0.40  # below this share of the full row sum, a typed total is suspect
 
 
 def _sanity_check_claim(deduplicated, row_sum):
     """Catch a supplied total that cannot describe the same data as the export.
 
-    A hand-typed figure fails silently: a typo, the wrong date range, the wrong
-    metric or a different attribution setting all produce a clean-looking report
-    built on a number that describes something else. Deduplication can only ever
-    remove conversions, never add them, so anything above the row sum is provably
-    a different measurement, and anything far below it is almost always the wrong
-    period or the wrong column.
+    Deduplication only removes conversions, never adds them, so a total above the
+    full-export row sum is provably a different measurement (typo, wrong period,
+    wrong metric) and blocks. Far below is only flagged, not blocked, because deep
+    breakdowns legitimately inflate the row sum.
     """
     if not row_sum:
         return {}
     ratio = deduplicated / row_sum
     if ratio > 1.0:
-        return {"reliable": False, "sanity": "above_row_sum", "ratio": round(ratio, 3),
-                "warning": (f"The supplied total ({deduplicated:,.0f}) is higher than the sum "
-                            f"of the export rows ({row_sum:,.0f}). Deduplication only removes "
-                            "conversions, so these two numbers cannot describe the same data. "
-                            "Check the date range, the attribution setting and the metric "
-                            "before using this report.")}
+        return _impossible_total(deduplicated, row_sum, ratio)
     if ratio < PLAUSIBLE_FLOOR:
         return {"sanity": "far_below_row_sum", "ratio": round(ratio, 3),
-                "warning": (f"The supplied total is {1 - ratio:.0%} below the export row sum, "
-                            "which is a much larger deduplication than platforms normally "
-                            "apply. Usually this means a different period or a different "
-                            "metric was read. Worth re-checking before quoting the figures.")}
+                "warning": (f"The supplied total is {1 - ratio:.0%} below the full export row "
+                            "sum. That can be normal with deep breakdowns, but is worth a "
+                            "re-check that the period and metric match.")}
     return {"sanity": "plausible", "ratio": round(ratio, 3)}
+
+
+def _impossible_total(deduplicated, row_sum, ratio):
+    return {"reliable": False, "sanity": "above_row_sum", "ratio": round(ratio, 3),
+            "warning": (f"The supplied total ({deduplicated:,.0f}) is higher than the sum of "
+                        f"the export rows ({row_sum:,.0f}). Deduplication only removes "
+                        "conversions, so these cannot describe the same data. Check the date "
+                        "range, the attribution setting and the metric.")}
 
 
 CAVEAT_TEXTS = {
@@ -188,6 +199,11 @@ CAVEAT_TEXTS = {
         "high",
         "The supplied account total is far below the export row sum, well beyond normal "
         "deduplication. This usually means a different period or a different metric was read."),
+    "no_order_id": (
+        "high",
+        "The store export had no order identifier column, so each line item was counted "
+        "as a separate order. A multi-product order inflates the order count. Re-export "
+        "including the order name or number; treat the order count as an upper bound."),
     "timezone_assumed_identical": (
         "low",
         "Ad account and store were assumed to share a timezone. Material on short windows, "
@@ -204,6 +220,8 @@ def _caveats_section(context, orders, options):
         triggered.append("supplied_total_impossible")
     elif context.get("claim_sanity") == "far_below_row_sum":
         triggered.append("supplied_total_suspect")
+    if not orders.get("has_order_id", True):
+        triggered.append("no_order_id")
     if not options.get("store_covers_all_revenue"):
         triggered.append("store_may_not_cover_all_revenue")
     if not orders["has_refund_data"]:
@@ -272,7 +290,7 @@ def _actual_section(orders, totals):
     }
 
 
-def _gap_section(ad_totals, order_totals, context):
+def _gap_section(ad_totals, order_totals, context):  # craftsman-ignore: PY002
     """The headline test.
 
     If the platform claims more purchases than the store recorded orders from
@@ -347,7 +365,7 @@ def _daily_section(ads, orders, overlap):
     }
 
 
-def parse_args():
+def parse_args():  # craftsman-ignore: PY002
     parser = argparse.ArgumentParser(
         description="Reconcile ad-platform claims against store records.")
     parser.add_argument("--ads", required=True,

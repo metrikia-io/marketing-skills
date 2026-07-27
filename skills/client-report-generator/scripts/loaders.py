@@ -14,6 +14,8 @@ from columns import (
     ORDERS_PATTERNS,
     PAID_SOCIAL_REFERRER,
     detect_columns,
+    detect_day_first,
+    is_total_row,
     parse_date,
     parse_number,
     read_csv_rows,
@@ -42,8 +44,9 @@ def load_ads(path):
     by_campaign = defaultdict(lambda: {"purchases": 0.0, "revenue": 0.0, "spend": 0.0,
                                        "click": 0.0, "view": 0.0})
 
+    day_first = detect_day_first([row.get(columns.get("date")) for row in rows])
     for row in rows:
-        _ingest_ad_row(row, columns, daily, by_campaign)
+        _ingest_ad_row(row, columns, daily, by_campaign, day_first)
 
     return {
         "columns_detected": columns,
@@ -54,14 +57,17 @@ def load_ads(path):
     }
 
 
-def _ingest_ad_row(row, columns, daily, by_campaign):
+def _ingest_ad_row(row, columns, daily, by_campaign, day_first=None):
     """Fold one export row into the daily and per-campaign totals.
 
-    The click/view split is carried down to campaign level as well as daily.
-    Without it the per-campaign chart can only repeat one averaged ratio on every
-    row, which looks like an analysis while containing no information.
+    A trailing Total row (Meta and Google add one by default) is skipped, because
+    counting it doubles every figure and, since ROAS is a ratio, the doubling
+    survives the eyeball test. The click/view split is carried to campaign level
+    as well as daily, so the per-campaign chart shows real ratios not one average.
     """
-    parsed_date = parse_date(row.get(columns.get("date")))
+    if is_total_row(row, columns):
+        return
+    parsed_date = parse_date(row.get(columns.get("date")), day_first)
     if not parsed_date:
         return
     metrics = _extract_ad_metrics(row, columns)
@@ -115,24 +121,33 @@ def load_orders(path, timezone_shift_hours=0):
         )
 
     state = {"daily": defaultdict(_empty_orders_day), "seen_ids": set(),
-             "has_refunds": False, "has_referrer": False, "currency": None}
+             "has_refunds": False, "has_referrer": False, "currency": None,
+             "counted_rows": 0}
 
+    day_first = detect_day_first([row.get(columns["created"]) for row in rows])
     for row in rows:
-        _ingest_order_row(row, columns, state, timezone_shift_hours)
+        _ingest_order_row(row, columns, state, timezone_shift_hours, day_first)
+    return _orders_result(columns, rows, state)
 
+
+def _orders_result(columns, rows, state):
     return {
         "columns_detected": columns,
         "daily": dict(state["daily"]),
         "row_count": len(rows),
         "unique_orders": len(state["seen_ids"]) or None,
+        "has_order_id": "order_id" in columns,
+        "counted_rows": state["counted_rows"],
         "has_refund_data": state["has_refunds"],
         "has_referrer_data": state["has_referrer"],
         "currency": state["currency"],
     }
 
 
-def _ingest_order_row(row, columns, state, timezone_shift_hours):
-    parsed_date = parse_date(row.get(columns["created"]))
+def _ingest_order_row(row, columns, state, timezone_shift_hours, day_first=None):
+    if is_total_row(row, columns):
+        return
+    parsed_date = parse_date(row.get(columns["created"]), day_first)
     if not parsed_date:
         return
     if timezone_shift_hours:
@@ -145,6 +160,7 @@ def _ingest_order_row(row, columns, state, timezone_shift_hours):
     total = parse_number(row.get(columns.get("total"))) if "total" in columns else 0.0
     bucket["orders"] += 1
     bucket["revenue"] += total
+    state["counted_rows"] += 1
 
     if "currency" in columns and not state["currency"]:
         state["currency"] = (row.get(columns["currency"]) or "").strip() or None

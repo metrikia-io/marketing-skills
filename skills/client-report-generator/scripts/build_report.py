@@ -170,6 +170,17 @@ def render(summary, account, narrative):
             f'<style>{STYLES}</style></head><body>{body}</body></html>')
 
 
+def _load_json(path):
+    try:
+        with open(path, encoding="utf-8") as handle:
+            return json.load(handle)
+    except OSError as error:
+        print(f"Could not open {path}: {error}", file=sys.stderr)
+    except json.JSONDecodeError as error:
+        print(f"{path} is not valid JSON (run aggregate.py first): {error}", file=sys.stderr)
+    return None
+
+
 def main():
     parser = argparse.ArgumentParser(description="Build a client-ready HTML report.")
     parser.add_argument("summary_path", help="Output of aggregate.py")
@@ -178,8 +189,9 @@ def main():
     parser.add_argument("--out", default="client-report.html")
     args = parser.parse_args()
 
-    with open(args.summary_path, encoding="utf-8") as handle:
-        summary = json.load(handle)
+    summary = _load_json(args.summary_path)
+    if summary is None:
+        return 1
     if "error" in summary:
         print(f"Aggregation failed: {summary.get('message')}", file=sys.stderr)
         return 1
