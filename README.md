@@ -41,6 +41,8 @@ Claude then applies the skill automatically when your request calls for attribut
 | Skill | Description |
 |-------|-------------|
 | `attribution-model-analysis` | Compare and interpret multi-touch attribution models (first-touch, last-touch, linear, time-decay, U-shaped, W-shaped) on your own campaign data. Understand which touchpoints drive revenue and optimize your media mix. |
+| `conversion-verifier` | Check whether the purchases your ad platform reports actually exist in your store. Produces a client-ready reconciliation report that separates the legitimate part of the gap (attribution windows, timezones, refunds, cross-channel overlap, view-through) from the part with no explanation. |
+| `client-report-generator` | Turn a month of multi-channel ad exports and store data into a client-ready report: the numbers, the written analysis, and an honest note on what those numbers rest on. Compares against the previous period. |
 
 ### Coming Soon
 
