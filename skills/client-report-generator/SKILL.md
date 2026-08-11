@@ -37,10 +37,20 @@ pays an agency for, and it is the section this tool exists to produce well.
 ## Step 1: Get the data by the cheapest route that works
 
 **Check for a connection before asking for a file.** Meta publishes an official MCP
-server at `https://mcp.facebook.com/ads`. If it is connected in this session, pull
-spend, purchases, purchase value and clicks per channel for both periods directly
-and skip the ad exports entirely. Only the store file is left, and a two-round
+server at `https://mcp.facebook.com/ads`. Everything this tool needs on the Meta
+side is there, verified on a live account on 2026-08-11: `amount_spent`,
+`impressions`, `clicks`, `actions:omni_purchase`, `omni_purchase_values` and
+`purchase_roas`, per campaign, over any date range. Pull both periods directly and
+skip the Meta exports entirely. Only the store file is left, and a two-round
 request becomes a one-line one.
+
+Two limits worth knowing before you promise it:
+
+- **The rollout is partial.** `ads_get_ad_accounts` returns `is_ads_mcp_enabled`
+  per account, and it is false on plenty of live business accounts with the message
+  that access is arriving gradually. Check the flag rather than assuming, and fall
+  back to the export without ceremony when it is false.
+- **It is Meta only.** Google, TikTok and the store still come in as files.
 
 Otherwise ask for exports, and ask for what they already have rather than a
 specification. `columns.py` recognises exports in several languages,
