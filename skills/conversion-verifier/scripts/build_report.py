@@ -20,8 +20,13 @@ import argparse
 import json
 import sys
 
-from charts import composition_chart, daily_chart, roas_chart
+from charts import bracket_chart, composition_chart
 from report_html import STRINGS, render_page
+
+
+def _localized(value, strings):
+    """Thousands separator follows the report language, not Python's default."""
+    return f"{value:,.0f}".replace(",", strings["thou"])
 
 
 def build_composition_rows(data):
@@ -40,76 +45,69 @@ def build_composition_rows(data):
     return usable or None
 
 
-def build_roas_values(data, strings):
-    """Reported ROAS, ROAS on clicks alone, and blended MER, on one axis."""
-    claimed = data["claimed"]
-    reported = claimed.get("roas")
-    mer = data["blended"].get("mer_true_revenue_over_spend")
-    if not reported:
-        return None
-    values = [{"label": strings["bar_reported"], "value": reported}]
-    click_only = _click_only_roas(claimed, reported)
-    if click_only:
-        values.append({"label": strings["bar_click"], "value": click_only,
-                       "emphasis": True})
-    if mer:
-        values.append({"label": strings["bar_mer"], "value": mer})
-    return values
 
 
-def _click_only_roas(claimed, reported):
-    click = claimed.get("purchases_click")
-    total = claimed.get("purchases")
-    if not click or not total:
-        return None
-    return round(reported * click / total, 2)
 
+def build_bracket_rows(data, strings):
+    """One row per campaign: clicks alone at one end, the declared figure at the other.
 
-def build_daily_series(data, max_points=60):
-    """Claimed purchases against recorded orders, day by day."""
-    days = [{"date": date, "claimed": values["claimed_purchases"],
-             "actual": values["actual_orders"]}
-            for date, values in sorted(data["daily"].items())]
-    return days[:max_points] if len(days) > max_points else days
+    Dropped rather than approximated when the click/view split is missing, for the
+    same reason the composition chart is: a bracket with no width would assert that
+    the declared figure is uncontested, which is the opposite of what is known.
+    """
+    rows = []
+    for name, metrics in list(data["by_campaign"].items())[:6]:
+        low, high = metrics.get("roas_click_only"), metrics.get("roas_declared")
+        if low is None or high is None:
+            continue
+        rows.append({
+            "label": name,
+            "sub": strings["spend_sub"].format(
+                spend=_localized(metrics.get("spend", 0), strings)),
+            "low": low,
+            "high": high,
+            "below_breakeven": bool(metrics.get("below_breakeven_on_clicks")),
+            "view_share": metrics.get("view_share"),
+        })
+    return rows or None
 
 
 def build_figures(data, strings):
     """Assemble only the charts the data actually supports."""
     figures = []
+    brackets = build_bracket_rows(data, strings)
+    if brackets:
+        figures.append({
+            "id": "bracket",
+            "title": strings["fig_bracket"],
+            "question": strings["q_bracket"],
+            "svg": bracket_chart(brackets, data.get("economics", {}).get("breakeven_roas"),
+                                 decimal=strings["dec"]),
+            "table": _bracket_table(brackets, strings),
+        })
     composition = build_composition_rows(data)
     if composition:
         figures.append({
             "id": "composition",
             "title": strings["fig_composition"],
             "question": strings["q_composition"],
-            "svg": composition_chart(composition),
+            "svg": composition_chart(composition, share_label=strings["share_label"],
+                                     pct_space=strings["pct_space"]),
             "table": _composition_table(composition, strings),
         })
-    figures.extend(_value_figures(data, strings))
     return figures
 
 
-def _value_figures(data, strings):
-    figures = []
-    roas = build_roas_values(data, strings)
-    if roas:
-        figures.append({
-            "id": "roas",
-            "title": strings["fig_roas"],
-            "question": strings["q_roas"],
-            "svg": roas_chart(roas),
-            "table": _roas_table(roas, strings),
-        })
-    days = build_daily_series(data)
-    if len(days) > 2:
-        figures.append({
-            "id": "daily",
-            "title": strings["fig_daily"],
-            "question": strings["q_daily"],
-            "svg": daily_chart(days),
-            "table": _daily_table(days, strings),
-        })
-    return figures
+def _bracket_table(rows, strings):
+    header = (f'<tr><th>{strings["th_campaign"]}</th><th>{strings["th_spend"]}</th>'
+              f'<th>{strings["th_share"]}</th><th>{strings["bar_click"]}</th>'
+              f'<th>{strings["bar_reported"]}</th></tr>')
+    body = "".join(
+        f"<tr><td>{esc(row['label'])}</td><td>{row['sub']}</td>"
+        f"<td>{row['view_share']:.0%}</td>"
+        f"<td>{row['low']:.2f}x</td><td>{row['high']:.2f}x</td></tr>"
+        for row in rows)
+    return header + body
 
 
 def _composition_table(rows, strings):
@@ -123,19 +121,6 @@ def _composition_table(rows, strings):
     return header + body
 
 
-def _roas_table(values, strings):
-    header = f'<tr><th>{strings["th_measure"]}</th><th>{strings["th_value"]}</th></tr>'
-    body = "".join(f"<tr><td>{esc(item['label'].replace('|', ' '))}</td>"
-                   f"<td>{item['value']:.2f}x</td></tr>" for item in values)
-    return header + body
-
-
-def _daily_table(days, strings):
-    header = (f'<tr><th>{strings["th_date"]}</th><th>{strings["th_claimed"]}</th>'
-              f'<th>{strings["th_orders"]}</th></tr>')
-    body = "".join(f"<tr><td>{esc(day['date'])}</td><td>{day['claimed']:.0f}</td>"
-                   f"<td>{day['actual']:.0f}</td></tr>" for day in days)
-    return header + body
 
 
 def parse_args():
@@ -150,22 +135,10 @@ def parse_args():
     return parser.parse_args()
 
 
-def _load_json(path):
-    try:
-        with open(path, encoding="utf-8") as handle:
-            return json.load(handle)
-    except OSError as error:
-        print(f"Could not open {path}: {error}", file=sys.stderr)
-    except json.JSONDecodeError as error:
-        print(f"{path} is not valid JSON (run reconcile.py first): {error}", file=sys.stderr)
-    return None
-
-
 def main():
     args = parse_args()
-    data = _load_json(args.json_path)
-    if data is None:
-        return 1
+    with open(args.json_path, encoding="utf-8") as handle:
+        data = json.load(handle)
     if "error" in data:
         print(f"Reconciliation failed: {data.get('message')}", file=sys.stderr)
         return 1

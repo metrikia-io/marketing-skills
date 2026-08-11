@@ -6,9 +6,14 @@ Three charts, and only three. Each one answers a question the reader actually ha
 when they open this report. A fourth chart would be decoration, and decoration on
 an analytical report costs credibility rather than adding to it.
 
-  A. What is my claimed number made of, and where does the contested part sit?
-  B. What does my ROAS become once the contested part is removed?
-  C. Is the gap steady or does it spike on particular days?
+  A. Which campaigns sit on the wrong side of break-even once the contested part
+     is removed, and which do not? (the budget decision)
+  B. What is my claimed number made of? (the mechanism behind A)
+  C. How much of each campaign's claim is contested? (where A comes from)
+
+Two earlier charts were removed rather than restyled. A three-bar chart of three
+ROAS figures was a chart doing a stat tile's job, and the day-by-day line answered
+a question no reader was asking by the time they reached it.
 
 Palette is the validated categorical pair (blue slot 1, orange slot 2): CVD
 separation ΔE 24.7, normal-vision 33.6, both well clear of the floors.
@@ -16,18 +21,19 @@ separation ΔE 24.7, normal-vision 33.6, both well clear of the floors.
 
 BLUE = "#2a78d6"
 ORANGE = "#eb6834"
+ORANGE_INK = "#b8430f"  # the orange stepped dark enough to be legible as text
+CONNECTOR = "#cfcdc4"
 INK = "#0b0b0b"
 INK_2 = "#52514e"
 MUTED = "#898781"
 GRID = "#e1e0d9"
 AXIS = "#c3c2b7"
-SURFACE = "#fcfcfb"
+SURFACE = "#ffffff"  # matches the report surface, so halos and rings are invisible
 GAP = 2  # surface gap between stacked segments, never a border
 
 
 def _esc(text):
-    return (str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-            .replace('"', "&quot;").replace("'", "&#x27;"))
+    return (str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
 
 
 def _text(x, y, content, size=11, fill=INK_2, anchor="start", weight="400"):
@@ -49,7 +55,7 @@ def _open(width, height):
             f'xmlns="http://www.w3.org/2000/svg">')
 
 
-def composition_chart(rows, width=640):
+def composition_chart(rows, width=640, share_label="view", pct_space=""):
     """Horizontal stacked bars: click-attributed vs view-through, per campaign.
 
     Stacked because the question is compositional (how much of this claim rests on
@@ -57,17 +63,21 @@ def composition_chart(rows, width=640):
     are long enough that vertical bars would force rotated labels.
     """
     label_w, bar_h, row_gap, top = 168, 22, 18, 8
-    plot_w = width - label_w - 74
+    # Reserve the share label's real width on the right. It used to get a flat 74px,
+    # which clipped "18 % view-through" to "18 % view-th" in the French report.
+    plot_w = width - label_w - (7 * len(share_label) + 46)
     height = top + len(rows) * (bar_h + row_gap) + 4
     biggest = max((row["click"] + row["view"]) for row in rows) or 1
     parts = [_open(width, height)]
     for index, row in enumerate(rows):
-        parts.append(_composition_row(row, index, label_w, bar_h, row_gap, top, plot_w, biggest))
+        parts.append(_composition_row(row, index, label_w, bar_h, row_gap, top, plot_w, biggest,
+                                      share_label, pct_space))
     parts.append("</svg>")
     return "".join(parts)
 
 
-def _composition_row(row, index, label_w, bar_h, row_gap, top, plot_w, biggest):
+def _composition_row(row, index, label_w, bar_h, row_gap, top, plot_w, biggest,
+                     share_label="view", pct_space=""):
     y = top + index * (bar_h + row_gap)
     click_w = plot_w * row["click"] / biggest
     view_w = plot_w * row["view"] / biggest
@@ -78,7 +88,117 @@ def _composition_row(row, index, label_w, bar_h, row_gap, top, plot_w, biggest):
         _text(0, y + 15, row["label"], 11, INK, weight=weight),
         _rect(label_w, y, click_w, bar_h, BLUE, 3),
         _rect(label_w + click_w + GAP, y, max(0, view_w - GAP), bar_h, ORANGE, 3),
-        _text(label_w + click_w + view_w + 8, y + 15, f"{share:.0%} view", 11, INK_2),
+        _text(label_w + click_w + view_w + 8, y + 15,
+              f"{share:.0%}".replace("%", pct_space + "%") + f" {share_label}", 11, INK_2),
+    ])
+
+
+LOSS_WASH = 0.07  # opacity of the below-break-even ground, a wash and never a block
+
+
+def bracket_chart(rows, breakeven=None, width=700, decimal="."):
+    """Per campaign, the honest range: clicks alone at one end, declared at the other.
+
+    A single ROAS number hides the only thing a buyer needs, which is how much of
+    that number is contestable. Drawing it as a segment says the truthful thing
+    directly: the real figure is somewhere on this line, and what decides the budget
+    is which side of break-even the line sits on.
+
+    Break-even is drawn as a threshold with the losing ground washed behind it, so
+    the verdict is a position rather than a number the reader has to compare.
+    """
+    label_w, row_h, top = 190, 56, 26
+    plot_h = len(rows) * row_h
+    low, high = _bracket_bounds(rows, breakeven)
+    scale = (width - label_w - 20) / (high - low)
+
+    def x_of(value):
+        return label_w + (value - low) * scale
+
+    ground = _breakeven_ground(x_of(breakeven), label_w, top, plot_h) if breakeven else ""
+    body = "".join(_bracket_row(row, top + index * row_h, x_of, decimal)
+                   for index, row in enumerate(rows))
+    return "".join([_open(width, top + plot_h + 34), ground, body,
+                    _bracket_axis(low, high, x_of, top + plot_h, decimal), "</svg>"])
+
+
+def _bracket_bounds(rows, breakeven):
+    """Pad the axis around everything that must be visible, break-even included."""
+    values = [row["low"] for row in rows] + [row["high"] for row in rows]
+    if breakeven is not None:
+        values.append(breakeven)
+    low, high = min(values), max(values)
+    pad = max(0.12, (high - low) * 0.12)
+    return max(0.0, low - pad), high + pad
+
+
+def _breakeven_ground(x, label_w, top, plot_h):
+    return "".join([
+        f'<rect x="{label_w:.1f}" y="{top - 12:.1f}" width="{x - label_w:.1f}" '
+        f'height="{plot_h:.1f}" fill="{ORANGE}" opacity="{LOSS_WASH}"/>',
+        f'<line x1="{x:.1f}" y1="{top - 12:.1f}" x2="{x:.1f}" '
+        f'y2="{top + plot_h - 12:.1f}" stroke="{ORANGE_INK}" stroke-width="1.5"/>',
+    ])
+
+
+def _bracket_row(row, y, x_of, decimal="."):
+    """One campaign: a connector, a dot at each end, and both values labelled."""
+    low_x, high_x = x_of(row["low"]), x_of(row["high"])
+    low_ink = ORANGE_INK if row.get("below_breakeven") else INK
+    return "".join([
+        _text(0, y + 6, row["label"], 12, INK, weight="600"),
+        _text(0, y + 22, row["sub"], 11, MUTED) if row.get("sub") else "",
+        f'<line x1="{low_x:.1f}" y1="{y + 12:.1f}" x2="{high_x:.1f}" y2="{y + 12:.1f}" '
+        f'stroke="{CONNECTOR}" stroke-width="2"/>',
+        _dot(low_x, y + 12, ORANGE),
+        _dot(high_x, y + 12, BLUE),
+        _value_label(low_x, y - 2, row["low"], low_ink, decimal),
+        _value_label(high_x, y - 2, row["high"], INK, decimal),
+    ])
+
+
+def _value_label(x, y, value, fill, decimal="."):
+    """A value label carrying a surface halo, so it stays readable wherever it lands.
+
+    A dot sitting exactly on the break-even threshold puts its label on top of that
+    line, and the line then shows through the gaps between characters. Painting the
+    surface as a stroke under the glyphs clears it without moving the label off the
+    value it belongs to.
+    """
+    text = f"{value:.2f}x".replace(".", decimal)
+    return (f'<text x="{x:.1f}" y="{y:.1f}" font-size="12" fill="{fill}" '
+            f'text-anchor="middle" font-weight="600" stroke="{SURFACE}" stroke-width="3.5" '
+            f'paint-order="stroke" '
+            f'font-family="system-ui,-apple-system,sans-serif">{_esc(text)}</text>')
+
+
+def _dot(x, y, fill):
+    """A 2px surface ring keeps the dot legible where it lands on the connector."""
+    return (f'<circle cx="{x:.1f}" cy="{y:.1f}" r="6" fill="{fill}" '
+            f'stroke="{SURFACE}" stroke-width="2"/>')
+
+
+def _bracket_axis(low, high, x_of, y, decimal="."):
+    ticks = [low + (high - low) * step / 3 for step in range(4)]
+    marks = "".join(_text(x_of(tick), y + 16, f"{tick:.2f}x".replace(".", decimal),
+                          11, MUTED, anchor="middle")
+                    for tick in ticks)
+    return (f'<line x1="{x_of(low):.1f}" y1="{y:.1f}" x2="{x_of(high):.1f}" y2="{y:.1f}" '
+            f'stroke="{GRID}" stroke-width="1"/>{marks}')
+
+
+def claim_split_chart(click, view, width=700):
+    """One bar: the claimed total, split into what the store can corroborate and what it cannot."""
+    total = click + view
+    if not total:
+        return ""
+    bar_h, top = 26, 6
+    click_w = width * click / total
+    return "".join([
+        _open(width, top + bar_h + 8),
+        _rect(0, top, click_w - GAP, bar_h, BLUE, 0),
+        _rect(click_w, top, width - click_w, bar_h, ORANGE, 3),
+        "</svg>",
     ])
 
 
@@ -91,9 +211,7 @@ def roas_chart(values, width=640):
     """
     bar_w, gap, left, top, plot_h = 96, 56, 8, 24, 150
     height = top + plot_h + 54
-    # `or 1` guards the all-zero case (a channel with spend but no revenue), which
-    # would otherwise divide by a zero ceiling and crash report generation.
-    ceiling = (max(item["value"] for item in values) or 0) * 1.18 or 1
+    ceiling = max(item["value"] for item in values) * 1.18
     parts = [_open(width, height)]
     parts.extend(_gridlines(width, top, plot_h, ceiling, suffix="x"))
     for index, item in enumerate(values):

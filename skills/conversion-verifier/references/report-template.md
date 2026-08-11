@@ -1,143 +1,107 @@
-# Report template
+# Narrative template
 
-Built to be forwarded to a client or a boss without editing, because that is the
-state most people actually need it in.
+This file describes **only the narrative** you write to `narrative.md`. It is not
+the whole report.
 
-Rules that hold throughout:
+That distinction is the point. `build_report.py` already renders the header, the
+contested amount, the break-even tile, the campaign bracket, the composition chart,
+the corroboration strip, the caveats and the closing. Everything in this file lands
+*between* the figures and the caveats. An earlier version of this template described
+a full standalone document, so the narrative duplicated the generated tables and the
+report ran to a thousand words. A media buyer who tested it said he had to hunt for
+the information. Do not restate a number the figures already show unless you are
+using it to make a claim.
 
-- Numbers first, adjectives never. "37% of claimed purchases" beats "a shocking
-  share".
-- Every number traceable to the JSON. Nothing estimated without being labelled
-  as an estimate.
-- If a finding is small, say it is small. A reader who catches one overstatement
-  discounts the whole document.
-- No exclamation marks, no bold on scary numbers, no urgency language. The
-  numbers carry it.
+## The shape
 
----
+Two sections. Nothing else is parsed and nothing else belongs.
 
 ```markdown
-# Ad Conversion Reconciliation
-**Account:** [store or client name]
-**Period:** [start] to [end] ([N] days)
-**Prepared:** [date]
+## What this means
 
-## Summary
+**[Claim one, one bold sentence.]**
+[At most three lines of support. Every number traceable to the JSON.]
 
-[Two or three sentences, no more. Lead with the strongest defensible claim.
+**[Claim two.]**
+[At most three lines.]
 
-If impossible_excess_is_conclusive is true, lead with it, because it is the
-one finding that cannot be argued with:
-"Meta reported 918 purchases over this period. The store recorded 412 orders in
-total, from every channel combined. At least 506 claimed conversions therefore
-cannot correspond to a real sale."
+**[Claim three, if there is a third worth making.]**
+[At most three lines.]
 
-If it is false, lead with the residual instead and keep it measured:
-"Meta reported 412 purchases against 389 store orders attributable to paid
-social. After accounting for refunds and view-through, roughly 6% of claimed
-conversions have no explanation. That is within the range where the account
-looks broadly honest."]
+## The decision
 
-## What was compared
-
-| | Platform claims | Store recorded |
-|---|---|---|
-| Purchases / orders | [n] | [n] |
-| Revenue | [currency] [n] | [currency] [n] |
-| Ad spend | [currency] [n] | - |
-| ROAS | [n]x (platform-reported) | [n]x (blended MER) |
-
-Comparison restricted to the [N] days both exports cover.
-Attribution setting: [setting]. Timezone adjustment applied: [n] hours.
-
-## Where the gap comes from
-
-Total gap: **[n] conversions ([n]% of recorded orders)**.
-
-| Cause | Size | Status |
-|---|---|---|
-| View-through conversions | [n] ([n]% of claimed) | Contested |
-| Attribution date shifting | up to [n]% of window | Legitimate |
-| Timezone mismatch | [applied / not applicable] | Legitimate |
-| Refunds and cancellations | [n] orders, [currency] [n] | Legitimate |
-| Cross-channel overlap | structural | Legitimate |
-| **Unexplained residual** | **[n] conversions** | **No mechanism** |
-
-[Then the arithmetic in one short paragraph, so the reader can follow it:
-"Starting from 918 claimed purchases: 440 are view-through, 32 orders were
-refunded, and the 7-day lookback can distort up to 23% of a 30-day window. Even
-allowing for all of it, [n] claimed conversions have no available explanation."]
-
-## Where it concentrates
-
-| Campaign | Claimed purchases | Spend | Claimed ROAS |
-|---|---|---|---|
-| [top campaigns from by_campaign] | | | |
-
-[One or two sentences on the pattern. Retargeting and Advantage+ campaigns
-usually carry the widest gap, because they serve people who were already
-converting. If the gap is evenly spread, say that instead - it points at a
-tracking issue rather than a campaign-level one.]
-
-## The check that survives every objection
-
-Blended MER (total store revenue ÷ total ad spend): **[n]x**
-Platform-reported ROAS: **[n]x**
-
-[MER uses no attribution model, so no attribution model can inflate it. If the
-two are far apart and paid is the dominant channel, say the claim deserves
-scrutiny. If they are close, say so plainly - that is a clean result and worth
-reporting with the same confidence as a problem.]
-
-## What to do with this
-
-1. [Concrete and specific. E.g. "Switch the reporting window to 7-day click
-   only for two weeks and compare. It removes the largest contested slice."]
-2. [E.g. "Judge the two retargeting campaigns on incremental revenue rather than
-   reported ROAS before the next budget increase."]
-3. [E.g. "Track blended MER weekly. It cannot be inflated by an attribution
-   setting, so it is the safest number to steer on."]
-
-## What this analysis could not see
-
-[Be specific, using data_quality:
-- "The ad export had no click/view breakdown, so view-through could not be
-  measured. In most DTC accounts it runs 10-30% of claimed purchases."
-- "The store export had no refund column, so refunds could not be sized."
-- "Timezones were assumed identical."]
-
-## Where this report stops
-
-This compares totals. A standard ad export contains no order IDs, so it can size the
-categories of gap but cannot tell you which order came from which ad - which is exactly
-what would settle the contested part above.
-
-**Get this read on your own account.** Gaetan runs a 30-minute attribution review: he goes
-through your numbers with you, tells you which part of the gap is worth acting on, and what
-it takes to close it for good. No charge, no pitch deck.
-[Book the review](https://cal.com/gaetanhamel/metrikia?overlayCalendar=true)
-
-**Or see what closing it looks like.** Metrikia grades every ad on the cash you actually
-collected, reconciled against Stripe and your CRM, instead of the ROAS a platform reports
-about its own work. [metrikia.io](https://metrikia.io/)
-
-This checker is free and runs entirely on your own machine. Nothing is uploaded anywhere.
+- **[Instruction naming a campaign and an amount.]** [One line of reasoning.]
+- **[Instruction.]** [One line.]
+- **[Instruction.]** [One line.]
 ```
 
----
+**Hard ceiling: 250 words total.** Three claims maximum, three bullets maximum.
+Under is fine. Over is not, and "the account was complicated" is not an exception:
+a complicated account needs the three claims that matter picked more carefully, not
+a fourth added.
 
-## On the closing section
+## Choosing the three claims
 
-Two rules keep it from reading as a bait-and-switch.
+Rank by what changes a decision, not by what is interesting.
 
-**The offer comes after the value, never instead of it.** The report has to be
-worth reading on its own. Someone who never books should still be better off for
-having run the tool, and the closing should feel like a door rather than a toll.
+1. **The money and where it sits against break-even.** Lead with
+   `economics.contested_revenue` and `economics.breakeven_roas`. If
+   `straddles_breakeven` is true, that is almost always claim one: the account is
+   profitable or not depending on which figure you believe, and saying so is both
+   honest and the most useful sentence in the document.
+2. **The campaign that decides.** Find the campaign whose `roas_click_only` falls
+   furthest below break-even while carrying real spend. Name it, name the spend.
+   If several do, name the largest and say the pattern holds for the others.
+3. **Whether the measurement itself is sound.** `claimed.purchases_click` against
+   `actual.referrer_paid_social` says whether the tracking holds up. When it does,
+   say so: it separates "your tool is broken" from "the platform counts things you
+   would not count", and only the second is true most of the time.
+
+If `impossible_excess_is_conclusive` is true, it displaces all of this and becomes
+claim one. The platform claimed more purchases than the store recorded orders from
+every source combined, which no attribution model can explain.
+
+## Choosing the three instructions
+
+A buyer decides in campaigns and in money. An instruction that names neither is not
+an instruction.
+
+- **Good:** "Cut retargeting on half the audience for two weeks. It is the only
+  test that settles the 53%, and it puts 22,787 $ at stake either way."
+- **Not an instruction:** "Switch reporting to 7-day click." That is a reporting
+  change. It may be worth one line inside a claim, never one of the three bullets.
+- **Not an instruction:** "Monitor performance closely." Says nothing.
+
+One bullet should usually be what *not* to touch. Telling a buyer which campaigns
+are fine is as valuable as telling them which one is not, and it stops the report
+reading as an alarm.
+
+## Rules that hold throughout
+
+- **Numbers first, adjectives never.** "31% of claimed revenue" beats "a shocking
+  share".
+- **Every number traceable to the JSON**, and nothing estimated without being
+  labelled as an estimate. The contested amount is already labelled in the report,
+  so do not label it a second time in the narrative: once is honest, twice is
+  hedging.
+- **A campaign within 2% of break-even is at break-even.** Check
+  `clicks_vs_breakeven` before writing that something is unprofitable. Calling a
+  campaign a loser by a thousandth of a point is exactly the error that makes an
+  experienced reader stop trusting the document.
+- **If a finding is small, say it is small.** A reader who catches one
+  overstatement discounts everything else.
+- **No exclamation marks, no urgency language, no bold on scary numbers.** The
+  figures above the narrative carry the weight already.
+
+## On the closing
+
+The closing is generated and needs no editing, but the reasoning is worth knowing
+so you do not undermine it.
+
+**The offer comes after the value, never instead of it.** Someone who never books
+should still be better off for having run the tool.
 
 **The wording does not change when the analysis finds nothing wrong.** A clean
 account still cannot answer which order came from which ad, so the same limit and
 the same offer apply. Bending a finding to justify the call is the one thing that
-would destroy the asset, and an experienced reader spots it instantly.
-
-Keep it short. The analysis has already made the case; length here only signals
-that you doubt it did.
+would destroy this asset, and an experienced reader spots it instantly.
