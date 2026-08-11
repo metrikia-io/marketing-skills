@@ -69,6 +69,10 @@ Then ask: *"check whether my Meta conversions are real"*. Claude gets your ad da
 (through Meta's own connection if you have it linked, from an export if not), asks
 the four questions that matter, runs the analysis and writes the report.
 
+**On Meta's official connection.** Its MCP server does not expose purchases split
+by click and by view (checked on a live account, 2026-08-11), and that split is what
+this tool measures. The CSV export stays required here.
+
 **`--gross-margin` is the argument worth passing.** It turns every ratio in the
 report into a verdict: break-even ROAS is 1 divided by your margin, so 62% margin
 means you need 1.61x. Without it the report states the figures and cannot tell you

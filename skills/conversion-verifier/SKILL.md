@@ -75,28 +75,27 @@ warmth comes from being useful and direct, not from adjectives.
 Two habits do the work: acknowledge briefly rather than narrating, and give them
 the finding in the chat before you hand over any file.
 
-## Step 1: Get the ad data by the cheapest route that works
+## Step 1: Ask for the export, and know why the connection cannot replace it
 
-Two routes, and you check for the cheap one before proposing the expensive one.
+**Meta's official connection does not carry the click/view split. Checked on a live
+account, 2026-08-11.** The MCP server at `https://mcp.facebook.com/ads` exposes
+`actions:omni_purchase`, `omni_purchase_values`, `purchase_roas` and the rest, but
+nothing that separates purchases attributed to a click from purchases attributed to
+a view, and no attribution-window breakdown among the ones it offers.
 
-### Route A, the connection: try this first
+That split is the entire analysis. Without it there is no contested slice, no
+contested revenue, and no clicks-only ROAS: the report falls back to comparing raw
+totals. So the connection cannot save anyone the trip to Ads Manager here, and
+proposing it first would send them on a detour to arrive at the same export.
 
-Meta publishes an official MCP server at `https://mcp.facebook.com/ads`. If it is
-connected in this session, the ad side needs no export at all: pull spend,
-purchases, purchase value and the click/view split per campaign per day, and go
-straight to the store file. Check whether those tools are available before you ask
-anyone to open Ads Manager.
+Ask for the export. If a connection is available it is still worth using for spend
+and purchase value once the exports are in, as a cross-check on the figures the
+files carry, but it does not change what you have to ask for.
 
-Two things to verify on the way, because they decide the analysis:
+If a future rollout adds the split, this decision flips and route A becomes the
+default. Re-check before assuming it has not.
 
-- **The click/view split.** If the connection cannot give purchases broken into
-  click and view, you have lost the largest contested slice and you should ask for
-  the export as well. Say so plainly rather than quietly reporting less.
-- **The account-level deduplicated total.** Summed rows overstate it. If the
-  connection returns campaign-level figures with no day breakdown, that is already
-  the right basis; if it returns day-level rows, get the undivided total too.
-
-### Route B, the export: when there is no connection
+### The export
 
 Ask for what they already have before asking them to build anything. `columns.py`
 recognises exports in several languages, semicolon-separated files, European number
