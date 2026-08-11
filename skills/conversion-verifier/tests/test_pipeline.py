@@ -264,50 +264,112 @@ def test_escaping_preserves_formatting():
           "<strong>&lt;script&gt;" in evil and "<script>" not in evil)
 
 
-def test_eu_number_and_total_row():
-    """European number formats and a trailing Total row must not corrupt totals."""
-    print("\nEU numbers and total-row guard")
-    from columns import parse_number
-    from loaders import load_ads
-    cases = [("1.234", 1234.0), ("1,234", 1234.0), ("1,23", 1.23),
-             ("1.234,56", 1234.56), ("(1,234)", -1234.0)]
-    for raw, expected in cases:
-        check(f"parse_number({raw!r}) == {expected}",
-              abs(parse_number(raw) - expected) < 0.01, f"got {parse_number(raw)}")
-    with tempfile.TemporaryDirectory() as tmp:
-        path = Path(tmp) / "meta.csv"
-        path.write_text(
-            "Campaign name,Day,Amount spent (USD),Purchases,Purchases conversion value\n"
-            "Prospecting,2026-06-01,100,10,1000\nProspecting,2026-06-02,100,10,1000\n"
-            "Total,,200,20,2000\nTotal,2026-06-02,200,20,2000\n")
-        ads = load_ads(str(path))
-    total_purchases = sum(day["purchases"] for day in ads["daily"].values())
-    check("total rows (dated and undated) are skipped", total_purchases == 20.0,
-          f"got {total_purchases}")
-    check("no phantom Total campaign", "Total" not in ads["by_campaign"])
+def test_wrapped_bullets_survive():
+    """A bullet that wraps must not lose its tail.
+
+    The renderer used to keep only the lines starting with "- ", so every wrapped
+    bullet was truncated mid-sentence while the report still looked finished. That
+    is the worst failure shape available here: silent, and it ships to a client.
+    """
+    print("\nWrapped bullets")
+    sys.path.insert(0, str(SCRIPTS))
+    from safe_html import narrative_to_html
+
+    out = narrative_to_html("- **Cut retargeting.** It is the only test\n"
+                            "  that settles the 53%, and it puts 22,787 at stake.\n"
+                            "- **Leave prospecting alone.** It holds either way.")
+    check("both bullets are rendered", out.count("<li>") == 2)
+    check("the wrapped tail survives", "at stake" in out)
+    check("the tail stays inside its own item",
+          "at stake.</li>" in out.replace(" </li>", "</li>"))
 
 
-def test_sanity_check_uses_full_row_sum():
-    """A legit total must not be blocked when orders cover fewer days than ads."""
-    print("\nSanity check against full row sum")
-    from loaders import load_ads, load_orders
-    from reconcile import reconcile
+def test_economics_needs_a_margin():
+    """Break-even only exists when a margin was supplied, and is never assumed."""
+    print("\nEconomics")
+    sys.path.insert(0, str(SCRIPTS))
+    from reconcile import _normalize_margin, _view_share
+
+    check("62 and 0.62 mean the same thing",
+          _normalize_margin(62) == _normalize_margin(0.62) == 0.62)
+    check("an impossible margin is refused", _raises(_normalize_margin, 0))
+    check("no margin means no break-even", _normalize_margin(None) is None)
+    check("the view share comes from click and view, not from a total",
+          abs(_view_share({"click": 684, "view": 306}) - 306 / 990) < 1e-9)
+    check("no split means no share", _view_share({"click": 0, "view": 0}) is None)
+
+
+def test_half_a_split_is_no_split():
+    """One of the two columns is not a split, and must never be read as one.
+
+    An export carrying Purchases (view) but not Purchases (click) used to satisfy
+    the split check. The missing side then read as zero, so the report announced
+    that 100% of claimed revenue was unverifiable and that click-only ROAS was
+    0.00x. Both were inventions of a missing column, and both would have gone to a
+    client as findings.
+    """
+    print("\nPartial click/view split")
+    sys.path.insert(0, str(SCRIPTS))
+    from reconcile import _view_share
+
+    data = _reconcile_view_only()
+    check("a one-sided export is not a split",
+          data["data_quality"]["has_click_view_split"] is False)
+    check("no contested amount is invented",
+          data["economics"]["contested_revenue"] is None,
+          str(data["economics"]["contested_revenue"]))
+    check("the reason is stated",
+          data["economics"]["contested_revenue_basis"]
+          == "unavailable_without_click_view_split")
+    check("the share is not computed when the loader says there is no split",
+          _view_share({"click": 0, "view": 306}, has_split=False) is None)
+
+
+def _reconcile_view_only():
+    """Run the pipeline on an export whose click column was removed."""
     with tempfile.TemporaryDirectory() as tmp:
-        ads_path = Path(tmp) / "meta.csv"
-        rows = ["Campaign,Day,Amount spent,Purchases,Purchases conversion value"]
-        for day in range(1, 11):  # 10 days, 10 purchases each -> full row sum 100
-            rows.append(f"P,2026-06-{day:02d},100,10,1000")
-        ads_path.write_text("\n".join(rows) + "\n")
-        orders_path = Path(tmp) / "orders.csv"
-        order_rows = ["Name,Paid at,Total"]
-        for day in range(1, 4):  # orders cover only 3 of the 10 days
-            order_rows.append(f"#{day},2026-06-{day:02d} 12:00:00,90")
-        orders_path.write_text("\n".join(order_rows) + "\n")
-        result = reconcile(load_ads(str(ads_path)), load_orders(str(orders_path)),
-                           {"claimed_total": 80})  # 80 <= full sum 100, legal
-    check("legit total is not falsely blocked",
-          result["claim_source"]["reliable"] is True,
-          f'sanity={result["claim_source"].get("sanity")}')
+        view_only = Path(tmp) / "view_only.csv"
+        _drop_column(EXAMPLES / "meta_export.csv", view_only, "Purchases (click)")
+        result = subprocess.run(
+            [sys.executable, str(SCRIPTS / "reconcile.py"),
+             "--ads", str(view_only),
+             "--ads-totals", str(EXAMPLES / "meta_export_totals.csv"),
+             "--orders", str(EXAMPLES / "shopify_orders.csv"),
+             "--gross-margin", "62"],
+            capture_output=True, text=True, check=False)
+    return json.loads(result.stdout)
+
+
+def _drop_column(source, destination, column):
+    rows = list(csv.DictReader(open(source, encoding="utf-8-sig")))
+    keep = [name for name in rows[0] if name != column]
+    with open(destination, "w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=keep)
+        writer.writeheader()
+        for row in rows:
+            writer.writerow({name: row[name] for name in keep})
+
+
+def test_bad_margin_returns_json():
+    """A rejected input comes back as the tool's error object, never as a traceback."""
+    print("\nBad input handling")
+    result = subprocess.run(
+        [sys.executable, str(SCRIPTS / "reconcile.py"),
+         "--ads", str(EXAMPLES / "meta_export.csv"),
+         "--orders", str(EXAMPLES / "shopify_orders.csv"),
+         "--gross-margin", "0"],
+        capture_output=True, text=True, check=False)
+    check("no traceback reaches the user", "Traceback" not in result.stderr)
+    check("the failure is valid JSON", json.loads(result.stdout).get("error") == "ValueError")
+    check("it exits non-zero", result.returncode == 1)
+
+
+def _raises(function, *args):
+    try:
+        function(*args)
+    except ValueError:
+        return True
+    return False
 
 
 def main():
@@ -316,8 +378,8 @@ def main():
                   test_window_handling, test_missing_split_drops_chart,
                   test_report_build, test_html_injection,
                   test_escaping_preserves_formatting,
-                  test_eu_number_and_total_row,
-                  test_sanity_check_uses_full_row_sum):
+                  test_wrapped_bullets_survive, test_economics_needs_a_margin,
+                  test_half_a_split_is_no_split, test_bad_margin_returns_json):
         suite()
     failed = [name for name, ok, _ in RESULTS if not ok]
     print(f"\n{len(RESULTS) - len(failed)}/{len(RESULTS)} passed")

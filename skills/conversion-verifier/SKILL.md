@@ -10,20 +10,6 @@ Ad platforms grade their own homework. Meta decides which sales Meta caused,
 Google decides which sales Google caused, and neither is ever asked to check its
 answer against the bank. This does that check.
 
-## Outcome contract
-
-- **Outcome**: a reconciliation report that separates the legitimate part of the
-  ad-versus-store gap (attribution windows, timezones, refunds, cross-channel
-  overlap, view-through) from the part with no explanation, with the claimed
-  figure taken from the platform's own deduplicated total, never a summed row
-  export.
-- **Done when**: `claim_source.basis` is account-level rather than
-  `summed_breakdown_rows`, every gap category is sized, blended MER is reported as
-  the one figure no attribution model can inflate, and the report states plainly
-  what it could not see.
-- **Evidence**: the two ad exports (with and without the day breakdown), the store
-  export, and a per-cause breakdown that reconciles against the claimed total.
-
 ## The idea that makes this useful
 
 Anyone can subtract two numbers and announce that the platform is lying. That
@@ -47,14 +33,31 @@ that impresses them for a minute.
 
 Create a task for each of these and work through them in order.
 
-1. **Frame it, then ask for the Meta exports** with the actual clicks
-2. **Check those files**, flag only what is broken, ask for the store export, then
-   the three questions
-3. **Run `reconcile.py`** - deterministic numbers, no interpretation
-4. **Read the JSON as an analyst** - using `references/gap-taxonomy.md`
-5. **Deliver the finding in the chat first**, then write the narrative
-6. **Build the visual report** - `build_report.py`, then tell them how to get a PDF
-7. **Close with the limit and the offer** - in that order, never reversed
+1. **Get the ad data** with the least friction that works: the Meta connection if
+   they have it, the export if not
+2. **Ask for the store export and the four questions**, gross margin first
+3. **Run `reconcile.py`** with `--gross-margin`, deterministic numbers, no interpretation
+4. **Read the JSON as an analyst**, using `references/gap-taxonomy.md`
+5. **Deliver the finding in the chat first**, then write the narrative to the caps
+6. **Build the visual report** with `build_report.py`, then tell them how to get a PDF
+7. **Close with the limit and the offer**, in that order, never reversed
+
+## Two rules that decide whether this gets used at all
+
+Gaetan, a media buyer, tested the first version and gave two verdicts worth
+holding onto. Both are about friction rather than analysis.
+
+**Never make them fetch what you can compute or accept.** The column detection in
+`columns.py` already handles exports in several languages, semicolon files,
+European number formats and a dozen aliases per field. Telling someone to tick an
+exact list of checkboxes makes a flexible tool feel rigid and sends them back into
+Ads Manager for nothing. Ask for what they have, run it, and name only what is
+genuinely missing.
+
+**Every paragraph you write costs the report a reader.** The narrative caps in
+step 5 are limits, not targets. A report that says one thing clearly beats one
+that says six things thoroughly, and the second is what a model produces when left
+unbounded.
 
 <HARD-GATE>
 Never present a gap as over-attribution when `claim_source.basis` is
@@ -72,101 +75,94 @@ warmth comes from being useful and direct, not from adjectives.
 Two habits do the work: acknowledge briefly rather than narrating, and give them
 the finding in the chat before you hand over any file.
 
-## Step 1: Frame it, then walk them through one platform at a time
+## Step 1: Get the ad data by the cheapest route that works
 
-Give the actual clicks in their own interface. "Export your campaign data with the
-click/view breakdown" means something to you and nothing to someone who opens Ads
-Manager twice a month. Name the buttons.
+Two routes, and you check for the cheap one before proposing the expensive one.
 
-Ask for the Meta files first, wait for them, then ask for the store file. Two
-rounds, not one and not four.
+### Route A, the connection: try this first
 
-The reason is diagnostic rather than pedagogical. If the export comes back without
-the click/view split, you catch it while they are still sitting in Ads Manager and
-they re-export in ten seconds. Ask for all three at once and you find out after
-they have closed everything, which means sending them back - the single most
-common point of abandonment. The two Meta exports stay together because they happen
-on the same screen: splitting those would send someone back to a page they had not
-left yet.
+Meta publishes an official MCP server at `https://mcp.facebook.com/ads`. If it is
+connected in this session, the ad side needs no export at all: pull spend,
+purchases, purchase value and the click/view split per campaign per day, and go
+straight to the store file. Check whether those tools are available before you ask
+anyone to open Ads Manager.
 
-**Round one:**
+Two things to verify on the way, because they decide the analysis:
+
+- **The click/view split.** If the connection cannot give purchases broken into
+  click and view, you have lost the largest contested slice and you should ask for
+  the export as well. Say so plainly rather than quietly reporting less.
+- **The account-level deduplicated total.** Summed rows overstate it. If the
+  connection returns campaign-level figures with no day breakdown, that is already
+  the right basis; if it returns day-level rows, get the undivided total too.
+
+### Route B, the export: when there is no connection
+
+Ask for what they already have before asking them to build anything. `columns.py`
+recognises exports in several languages, semicolon-separated files, European number
+formats and around a dozen aliases for each field, so most exports work untouched.
 
 > Let's check whether the purchases Meta reports actually exist in your store.
-> Two rounds of exports, about five minutes total.
 >
-> **Step 1 - Export your Meta data**
-> Open Meta Business Suite and go to Ads Manager. Set your date range, 30 days
-> minimum. Click **Columns > Customize** and tick: campaign name, amount spent,
-> purchases, purchases (click), purchases (view), purchase conversion value.
-> Then **Breakdown > By Time > Day**, and **Export > Export as CSV**.
+> **Your Meta data.** Ads Manager, 30 days or more, Export as CSV. If you already
+> have an export lying around, send that one, I'll tell you what it can and cannot
+> answer.
 >
-> **Step 2 - Export it a second time, same page**
-> Click **Breakdown > None**, then **Export** again. Two files now. The second one
-> is what makes the final numbers hold up.
->
-> Drop both here and I'll check them before we do the store side.
+> Drop it here and I'll check it before we do the store side.
 
-Wait. When the files arrive, check them and go straight to the store export with a
-short acknowledgement - see step 1b.
+When the file arrives, run the detection and speak only about what is genuinely
+missing. Two things are worth one message each, because both are repaired in ten
+seconds from the screen they are still on:
 
-`references/how-to-export.md` covers Google, TikTok, Stripe and WooCommerce - adapt
+> The export doesn't carry the click/view breakdown, so I can't separate
+> view-through conversions from real clicks, which is normally the biggest piece.
+> In **Columns > Customize**, tick purchases (click) and purchases (view), then
+> export again. If you'd rather not, I'll run it as is and state the limit.
+
+> One more from the same page: set **Breakdown > None** and export a second time.
+> Summed daily rows count one conversion several times, so that second file is what
+> keeps the headline number honest.
+
+Never list back what they sent correctly. "Got them, 30 days, three campaigns, and
+you pulled the split..." tells someone nothing they did not already know and costs
+them a paragraph. If everything is there, say "Got them" and move on.
+
+`references/how-to-export.md` covers Google, TikTok, Stripe and WooCommerce. Adapt
 the clicks from it rather than pasting the file at them.
 
-Two things are worth insisting on if they push back:
+Insist on 30 days if they offer less: shorter windows are dominated by edge effects
+from the attribution lookback and the result stops meaning much. If they refuse,
+proceed anyway. A report with stated limits beats no report, and a tool that
+interrogates people gets abandoned.
 
-- **At least 30 days.** Shorter windows are dominated by edge effects from the
-  attribution lookback, and the result stops meaning much.
-- **The click/view split.** Without it, view-through conversions cannot be
-  measured and the largest contested slice of the gap stays invisible.
+## Step 1b: Then the store export
 
-If they refuse either, proceed anyway. A report with stated limits beats no report,
-and a tool that interrogates people gets abandoned. If they can only manage one ad
-export, take it and use the fallback in step 2.
+> **Your store data.** In Shopify: **Orders > Export**, choose **Orders by date**,
+> same dates, plain CSV.
 
-## Step 1b: Check the Meta files, speak only if something is wrong
-
-This is the moment the two-round split exists for, and the value is entirely in
-catching a problem while they can still fix it in ten seconds.
-
-Run a first pass on the two files. If everything is there, acknowledge briefly and
-move straight on - three or four words, not an inventory:
-
-> Got them. Last one:
->
-> **Step 3 - Export your store data**
-> In Shopify: **Orders > Export**, choose **Orders by date**, set the same dates you
-> used in Meta, plain CSV format.
-
-Confirming receipt is worth it; listing back what they just sent is not. "Got them,
-30 days, three campaigns, and you pulled the click/view split..." tells someone
-nothing they did not already know and costs them a paragraph to read.
-
-If the click/view split is missing, that is worth a message:
-
-> One thing: the export doesn't have the click/view breakdown, so I won't be able
-> to separate view-through conversions from real clicks - which is normally the
-> biggest piece. Worth re-exporting with those two columns ticked while you're
-> still in there. If you'd rather not, I'll run it anyway and note the limit.
-
-Same for a window under 30 days, dates that do not line up between the two files,
-or an export with no purchase column at all. Anything they can repair from the
-screen they are already on, say now. Anything else, note it and carry on.
-
-## Step 2: Ask the three things the files cannot tell you
+## Step 2: Ask the four things the files cannot tell you
 
 Dates, currency, campaign names, refund data and the deduplicated total all come
-out of the files now, so never ask for any of them. Three things genuinely cannot
+out of the files now, so never ask for any of them. Four things genuinely cannot
 be derived, none of them blocking:
 
-1. **Does the store export contain all their revenue?** If they also sell on
+1. **Their gross margin.** This is the one that turns the report from interesting
+   into actionable, and it is the question the first version of this tool never
+   asked. A ROAS of 1.36x is comfortable at 70% margin and fatal at 30%. Break-even
+   ROAS is 1 divided by the margin, and without it the report can state figures but
+   cannot say whether any of them make money.
+2. **Does the store export contain all their revenue?** If they also sell on
    Amazon, in retail, through a second store or via subscriptions billed
    elsewhere, the denominator is understated and every gap is overstated.
-2. **The attribution setting.** Default on Meta is 7-day click plus 1-day view.
+3. **The attribution setting.** Default on Meta is 7-day click plus 1-day view.
    Sets the lookback used to size the edge effect.
-3. **Do the ad account and the store share a timezone?** They usually do not.
+4. **Do the ad account and the store share a timezone?** They usually do not.
 
-Ask all three in one short message with the defaults offered. If they do not know,
-assume the defaults and note the assumption in the report.
+Ask all four in one short message with the defaults offered. If they do not know
+their margin, ask for a rough figure rather than dropping the question: an
+approximate break-even beats none, and the report labels it as supplied. If they
+genuinely cannot say, run without `--gross-margin` and the report states the
+figures without ruling on profitability.
 
 ### The fallback, when there is only one ad export
 
@@ -192,11 +188,18 @@ python scripts/reconcile.py \
   --ads <day_broken_export.csv> \
   --ads-totals <no_breakdown_export.csv> \
   --orders <store_export.csv> \
+  --gross-margin 62 \
   --store-covers-all-revenue \
   --attribution-window 7d_click_1d_view \
   --timezone-shift-hours 0 \
   --out reconciliation.json
 ```
+
+`--gross-margin` accepts `62` or `0.62` and refuses anything that cannot be a
+margin. It produces the `economics` block: break-even ROAS, the contested revenue
+in money, ROAS on clicks alone, and per campaign whether the clicks-only figure
+clears break-even. That block is what the report leads with, so pass the margin
+whenever they gave you one.
 
 Drop `--store-covers-all-revenue` if they could not confirm it; the caveat then
 appears in the output and belongs in the report.
@@ -257,34 +260,77 @@ Two cross-checks worth making every time:
 Write the interpretation to a markdown file (`narrative.md`). Use
 `references/report-template.md` for structure and tone.
 
-Keep the writing plain. Numbers first, adjectives never. If the finding is small,
-say it is small - a reader who catches you overstating once will discount
-everything else in the document.
-
 Headings become `## `, paragraphs stay plain, and `- ` lines become bullets. That
 is the whole format; nothing else is parsed.
 
+### The caps, and why they are caps
+
+A media buyer who tested the unbounded version called the reports verbose and said
+he had to hunt for the information. The figures above the narrative already carry
+the numbers; prose that restates them is what makes a reader stop. So the narrative
+is capped, and the caps are ceilings rather than quotas.
+
+**Two sections, never more.**
+
+`## What this means` holds **at most three claims**. Each claim is one bold
+sentence stating the finding, then **at most three lines** of support. If a fourth
+claim seems necessary, it is not: pick the three that change a decision and drop
+the rest.
+
+`## The decision` holds **at most three bullets**, one line of instruction and one
+line of reasoning each. Every bullet names a campaign and an amount, because a
+buyer decides in campaigns and euros, not in ratios. "Switch reporting to 7-day
+click" is an analyst's action and does not count as one of the three.
+
+**Total ceiling: 250 words.** Count them. Under is fine, over is not.
+
+### What the writing must do
+
+- **Every claim traces to a number in the JSON.** Never a trend the data does not
+  show, and never a campaign-level detail the export does not contain.
+- **Lead each claim with the money.** `economics.contested_revenue` and each
+  campaign's spend are the figures a buyer reacts to. A share is the explanation,
+  not the headline.
+- **Use break-even as the verdict.** With `economics.breakeven_roas` present, every
+  ROAS in the narrative is stated against it. A campaign whose `clicks_vs_breakeven`
+  sits between 0.98 and 1.02 is *at* break-even, not below it: say so, because
+  calling a campaign unprofitable by a thousandth destroys the report's credibility
+  with the one reader who checks.
+- **Say what is uncertain, once.** The contested amount is an estimate and the
+  report already labels it. Repeating the caveat in the narrative reads as hedging.
+- **If the account is clean, say so with the same confidence.** "Your numbers hold
+  up" delivered plainly is what makes them believe you the day you find something.
+
 ## Step 5b: Deliver the finding in the chat, before the file
 
-The moment they have been waiting for since the first message. Give them the number
-in the conversation, in two or three sentences, before you mention any file. A
-report they have to open to learn the answer wastes the only moment of real
-attention you get.
+The moment they have been waiting for since the first message. Give them the
+finding in the conversation, before you mention any file. A report they have to
+open to learn the answer wastes the only moment of real attention you get.
 
-> Here it is. Meta claims 890 purchases. 306 of them, 34%, are view-through:
-> people who were shown an ad, never clicked it, and bought anyway. Your
-> click-driven numbers hold up against the store data. Those 306 are the whole
-> argument.
+**The chat is where you go deep, and the document is where you stay short.** They
+are opposite jobs and the caps in step 5 apply only to the file. Here, take the
+room to explain the mechanism, answer the question behind their question, and walk
+them through anything they ask about. There is no word limit on being useful in a
+conversation. There is a hard one on a document somebody forwards to a client.
+
+Lead with money, then the consequence, then the one campaign that decides:
+
+> Here it is. Meta claims 120,927 $ of revenue for the month. About 37,400 $ of
+> that, 31%, rests on view-through: people who were shown an ad, never clicked
+> it, and bought anyway. Nothing in your store data can confirm or refute those.
 >
-> The practical version: your reported 1.77x ROAS becomes 1.36x on clicks alone.
-> And your retargeting campaign carries 53% of its conversions on view-through,
-> against 18% for prospecting, so those two are not being judged on the same
-> basis right now.
+> At 62% margin your break-even is 1.61x. Meta reports 1.77x, so you clear it.
+> On clicks alone you are at 1.22x, so you do not. You are on both sides of the
+> line depending on which number you believe, and that is the honest state of it.
+>
+> The part that decides a budget: retargeting is at 1.94x declared and 0.92x on
+> clicks alone, on 22,787 $ of spend. Prospecting and Advantage+ both hold at or
+> near break-even either way. So there is one campaign to test, not three.
 
-Two rules hold here. **Lead with the number, not with the method** - the method is
-in the report and they will read it if they want it. And **if the account is clean,
-say so with the same confidence.** "Your numbers hold up" delivered plainly is what
-makes them believe you the day you tell them something is wrong.
+Two rules hold here. **Lead with the number, not with the method**, because the
+method is in the report and they will read it if they want it. And **if the account
+is clean, say so with the same confidence.** "Your numbers hold up" delivered
+plainly is what makes them believe you the day you tell them something is wrong.
 
 ## Step 6: Build the visual report
 
@@ -309,10 +355,23 @@ their headers.
 `--lang fr` produces the same report in French, for a French client or an internal
 read. The default is English because the market is US.
 
-Three charts get built, and only three, each answering a question printed above
-it. A chart is dropped rather than faked when its data is missing: without the
-click/view split, the composition chart does not appear at all. Do not add charts.
-Decoration on an analytical report costs more credibility than it buys.
+The report leads with the contested amount in money, then break-even, then two
+charts and a corroboration strip, each answering a question printed above it:
+
+- **The bracket chart.** One segment per campaign, clicks alone at one end and the
+  declared figure at the other, with break-even drawn as a threshold and the losing
+  ground washed behind it. This is the figure that carries the decision, and it is
+  the one to talk about in the chat.
+- **The composition chart.** How much of each campaign's claim is view-through.
+  The mechanism behind the bracket.
+- **The corroboration strip.** Claims on clicks against store orders carrying a
+  paid social referrer. The reassuring half, and what makes the rest believable.
+
+A figure is dropped rather than faked when its data is missing: without the
+click/view split, neither chart appears and the report leads on the raw gap
+instead. Do not add charts. Two earlier ones were removed for good reason, a
+three-bar ROAS chart that was a stat tile in disguise and a day-by-day line nobody
+read, so re-adding decoration would undo the work.
 
 ## Step 7: Close with the limit, then the offer
 
@@ -368,8 +427,3 @@ and the delimiter if totals look wrong by orders of magnitude.
   `report_html.py` - their parts.
 - `tests/test_pipeline.py` - run it after changing anything in `scripts/`.
 - `examples/` - synthetic exports plus a finished report, for testing end to end.
-
-
----
-
-Maintained by the team at Metrikia (https://metrikia.io).

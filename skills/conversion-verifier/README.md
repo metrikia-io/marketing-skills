@@ -49,6 +49,7 @@ python scripts/reconcile.py \
   --ads examples/meta_export.csv \
   --ads-totals examples/meta_export_totals.csv \
   --orders examples/shopify_orders.csv \
+  --gross-margin 62 \
   --out recon.json
 
 python scripts/build_report.py recon.json --account "Example Store" --out report.html
@@ -64,9 +65,14 @@ Open `report.html` and print to PDF. A finished example ships in
 cp -r conversion-verifier ~/.claude/skills/
 ```
 
-Then ask: *"check whether my Meta conversions are real"*. Claude walks you through
-the exports, asks the three questions that matter, runs the analysis and writes the
-report.
+Then ask: *"check whether my Meta conversions are real"*. Claude gets your ad data
+(through Meta's own connection if you have it linked, from an export if not), asks
+the four questions that matter, runs the analysis and writes the report.
+
+**`--gross-margin` is the argument worth passing.** It turns every ratio in the
+report into a verdict: break-even ROAS is 1 divided by your margin, so 62% margin
+means you need 1.61x. Without it the report states the figures and cannot tell you
+whether any of them make money.
 
 ---
 

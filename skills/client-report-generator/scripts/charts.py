@@ -21,13 +21,13 @@ INK_2 = "#52514e"
 MUTED = "#898781"
 GRID = "#e1e0d9"
 AXIS = "#c3c2b7"
-SURFACE = "#fcfcfb"
+SURFACE = "#ffffff"  # matches the report surface
+DE_EMPHASIS = "#c8c6bd"  # the grey that lets one bar carry the story
 GAP = 2  # surface gap between stacked segments, never a border
 
 
 def _esc(text):
-    return (str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-            .replace('"', "&quot;").replace("'", "&#x27;"))
+    return (str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
 
 
 def _text(x, y, content, size=11, fill=INK_2, anchor="start", weight="400"):
@@ -82,6 +82,40 @@ def _composition_row(row, index, label_w, bar_h, row_gap, top, plot_w, biggest):
     ])
 
 
+def channel_mix_chart(rows, width=680):
+    """Where the money went, with what each euro of it returned.
+
+    This replaced a column chart of ROAS by channel, which was actively misleading:
+    it drew the highest ratio tallest and so made a channel holding a quarter of the
+    budget look like the account's engine. Bar length is spend, because that is the
+    thing a client is actually asking about, and the return rides the bar as a
+    label. One question, one figure, no ratio pretending to be a magnitude.
+    """
+    if not rows:
+        return ""
+    label_w, bar_h, row_gap, top = 130, 24, 20, 6
+    # Reserve the widest value label's real width, or the longest one gets clipped
+    # at the viewBox edge, which turns "3.05x back" into "3.05x bac".
+    longest = max(len(row["value_label"]) for row in rows)
+    plot_w = width - label_w - (7 * longest + 20)
+    biggest = max(row["spend"] for row in rows) or 1
+    body = "".join(_mix_row(row, top + index * (bar_h + row_gap),
+                            label_w, bar_h, plot_w, biggest)
+                   for index, row in enumerate(rows))
+    return (_open(width, top + len(rows) * (bar_h + row_gap) + 4) + body + "</svg>")
+
+
+def _mix_row(row, y, label_w, bar_h, plot_w, biggest):
+    """The lead channel keeps the accent; the rest sit in the de-emphasis grey."""
+    bar_w = plot_w * row["spend"] / biggest
+    fill = BLUE if row.get("emphasis") else DE_EMPHASIS
+    return "".join([
+        _text(0, y + 16, row["label"], 12, INK, weight="600" if row.get("emphasis") else "400"),
+        _rect(label_w, y, bar_w, bar_h, fill, 3),
+        _text(label_w + bar_w + 10, y + 16, row["value_label"], 12, INK_2),
+    ])
+
+
 def roas_chart(values, width=640):
     """Three ways of measuring the same thing, on one axis.
 
@@ -91,9 +125,7 @@ def roas_chart(values, width=640):
     """
     bar_w, gap, left, top, plot_h = 96, 56, 8, 24, 150
     height = top + plot_h + 54
-    # `or 1` guards the all-zero case (a channel with spend but no revenue), which
-    # would otherwise divide by a zero ceiling and crash report generation.
-    ceiling = (max(item["value"] for item in values) or 0) * 1.18 or 1
+    ceiling = max(item["value"] for item in values) * 1.18
     parts = [_open(width, height)]
     parts.extend(_gridlines(width, top, plot_h, ceiling, suffix="x"))
     for index, item in enumerate(values):

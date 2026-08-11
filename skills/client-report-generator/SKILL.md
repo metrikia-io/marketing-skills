@@ -11,17 +11,6 @@ into a deck and the buyer writes the insights. This automates the pull and the
 comparison; the write-up you still do properly, because that is the part with the
 value in it.
 
-## Outcome contract
-
-- **Outcome**: a client-ready report in three sections - the numbers period over
-  period, a written analysis of what changed and why, and an honest note on what
-  the numbers can be trusted for.
-- **Done when**: every claim in the narrative traces to a figure in the summary,
-  material moves are separated from noise (a sub-10% change is not a story), and
-  the honesty section names the cross-channel over-attribution plainly.
-- **Evidence**: two periods of ad and store exports, the aggregated summary, and
-  the channel-revenue-versus-store-revenue gap shown in the report itself.
-
 ## What this actually competes with
 
 Not Looker Studio. Looker already draws the charts, connects to the APIs, and does
@@ -45,23 +34,35 @@ pays an agency for, and it is the section this tool exists to produce well.
 3. **Read the summary and write the narrative** - the real work, three short parts
 4. **Build the report** - `build_report.py`, then how to get a PDF
 
-## Step 1: Ask for the exports
+## Step 1: Get the data by the cheapest route that works
 
-Give the clicks in their own interface - name the buttons.
+**Check for a connection before asking for a file.** Meta publishes an official MCP
+server at `https://mcp.facebook.com/ads`. If it is connected in this session, pull
+spend, purchases, purchase value and clicks per channel for both periods directly
+and skip the ad exports entirely. Only the store file is left, and a two-round
+request becomes a one-line one.
+
+Otherwise ask for exports, and ask for what they already have rather than a
+specification. `columns.py` recognises exports in several languages,
+semicolon-separated files, European number formats and around a dozen aliases per
+field, so most exports work untouched. Telling someone to tick an exact list of
+checkboxes makes a flexible tool feel rigid and sends them back into Ads Manager
+for nothing.
 
 > Let's build your client report. I need two months so I can show what changed:
 > this month and last.
 >
-> **1. Meta** - Ads Manager, campaign level, for each month: columns campaign
-> name, amount spent, purchases, purchase conversion value, link clicks. Export
-> CSV, once per month.
+> **Your ad exports**, one file per platform per month. Whatever your normal export
+> looks like is almost certainly fine. Send them and I'll tell you if something is
+> genuinely missing.
 >
-> **2. Google, if you run it** - same idea: cost, conversions, conv. value, clicks,
-> one CSV per month.
->
-> **3. The store** - Shopify Orders > Export > Orders by date, one file per month.
+> **The store**, Shopify Orders > Export > Orders by date, one file per month.
 >
 > Drop them in and tell me which files are which month.
+
+Run the detection when they arrive and speak only about what is actually missing.
+Without revenue there is no ROAS and that is worth one message; without clicks the
+report simply drops CPC and says nothing about it.
 
 `references/how-to-export.md` covers TikTok and Stripe. Adapt the clicks from it
 rather than pasting the file.
@@ -90,35 +91,56 @@ enough to be worth leading with (a move under 10% is noise, not a story).
 ## Step 3: Write the narrative - this is the job
 
 Read the summary. Then write the write-up to a markdown file. This is the entire
-reason the tool exists, so do not rush it into three generic bullet points.
+reason the tool exists, and it is also the part that goes wrong when left
+unbounded: a media buyer who tested the first version said the reports were too
+long and he had to hunt for the information. The generated figures above the
+narrative already carry the numbers. What you add is judgment, and judgment is
+short.
 
-Three parts, using `## ` headings so they render as sections:
+Two sections, using `## ` headings so they render as sections.
 
-**The month in one line.** The single most important thing that happened, stated
-plainly. Lead with the move that matters, from `headline_moves`. Not a summary of
-everything - the one thing.
+### `## The month in one line`
 
-**What we did, and why.** The decisions and the reasoning. Which channel got more
-budget and on what evidence, which one was held flat and why, what the risk is.
-This is what a client cannot get from Looker, and it is what makes them keep the
+**At most two claims**, each a bold sentence followed by **at most three lines**
+of support.
+
+The first claim is the single most important thing that happened, from
+`headline_moves`. Not a summary of everything, the one thing. The second exists
+only if there is a second thing a client would act on.
+
+This is the part a client cannot get from Looker, and the reason they keep the
 agency. Write it the way a senior buyer talks: specific, decision-first, honest
 about what is uncertain.
 
-**Where the budget goes next.** Concrete, forward-looking, testable. Not "keep
-optimising" - actual moves with actual thresholds.
+### `## Where the budget goes next`
 
-Two rules hold throughout, and they are what separate this from a template:
+**At most three bullets.** One line of instruction, one line of reasoning.
+
+Every bullet carries a channel and an amount, because a budget conversation
+happens in channels and money. "Keep optimising" is not a move. "Push Meta to
+70,000 $ in July, it took a 37% increase at flat efficiency" is.
+
+One of the three should be the condition for rolling back. A client who reads the
+threshold in advance does not argue about it later.
+
+### The ceiling
+
+**250 words total.** Count them. Under is fine, over is not. If a third claim
+feels necessary, the first two were not sharp enough.
+
+### Rules that hold throughout
 
 - **Every claim traces to a number in the summary.** If you write "prospecting
   scaled cleanly", the ROAS held while spend rose, and you can point to it. Never
-  invent a trend the data does not show.
-- **Name what is uncertain.** If a channel's ROAS is inflated by view-through or
-  by cross-channel overlap, say so in the write-up. A report that flags its own
-  soft numbers is the one a client trusts. This also sets up section three
-  honestly rather than as a bolt-on.
-
-Do not fabricate campaign-level detail the exports do not contain. Write from what
-`aggregate.py` actually found.
+  invent a trend the data does not show, and never invent a figure that sounds
+  right: a client who checks one number against their dashboard and finds it wrong
+  stops reading the rest.
+- **Do not fabricate campaign-level detail the exports do not contain.** Write from
+  what `aggregate.py` actually found.
+- **Name what is uncertain, once.** If a channel's ROAS is inflated by
+  cross-channel overlap, say so. A report that flags its own soft numbers is the
+  one a client trusts. Once is honest; repeating it reads as hedging, and the
+  generated closing already covers the structural version.
 
 ## Step 4: Build the report
 
@@ -133,11 +155,21 @@ Then hand it over as theirs to send:
 > the client as-is: the numbers up top, the write-up in the middle, and a short
 > note at the bottom on what the figures can and can't be trusted for.
 
-The report has three sections. Section one (the numbers) is generated. Section two
-is your narrative. Section three ("What these numbers rest on") is generated and
-fixed: it explains that channel revenue overlaps because each platform counts its
-own sales, points at blended ROAS as the one figure no attribution model can
-inflate, and names order-level reconciliation - Metrikia - as what closes the gap.
+The report opens with blended ROAS as a hero figure and the period's biggest move
+in one line, both read off the summary, so it says something specific before your
+narrative starts. Then the tiles, then one chart and the channel table, then your
+narrative, then the closing.
+
+The chart plots **spend** per channel with the return as a label on the bar, and it
+is deliberately not a chart of ROAS. An earlier version drew a column per channel
+sized by ROAS, which made the channel with the highest ratio look like the account's
+engine even when it held a quarter of the budget. Bar length is money, because that
+is what a budget conversation is about. Do not change it back.
+
+The closing ("What these numbers rest on") is generated and fixed: it explains that
+channel revenue overlaps because each platform counts its own sales, points at
+blended ROAS as the one figure no attribution model can inflate, and names
+order-level reconciliation, Metrikia, as what closes the gap.
 
 That third section is the honest close, and it is the bridge. Do not soften it into
 a pitch and do not remove it: a report that says what its numbers are worth is more
@@ -162,8 +194,3 @@ because it answers a doubt the reader already had, not one the report planted.
   the same audited modules as the conversion-verifier tool.
 - `tests/test_pipeline.py` - run after changing anything in `scripts/`.
 - `examples/` - two months of synthetic exports and a finished report.
-
-
----
-
-Maintained by the team at Metrikia (https://metrikia.io).

@@ -26,7 +26,7 @@ import argparse
 import json
 import sys
 
-from charts import roas_chart
+from charts import channel_mix_chart
 from safe_html import esc, narrative_to_html
 
 
@@ -45,6 +45,58 @@ def _delta_badge(move, invert=False):
     arrow = "▲" if pct > 0 else "▼"
     cls = "up" if good else "down"
     return f'<span class="d {cls}">{arrow} {abs(pct):.0%}</span>'
+
+
+METRIC_WORDS = {
+    "spend": ("spend", "$"),
+    "roas": ("ROAS", "x"),
+    "purchases": ("purchases", ""),
+}
+
+
+def _hero(summary):
+    """The answer to the question the client opens the file to ask.
+
+    Blended ROAS, because it is the one figure no attribution model can inflate and
+    the one a client repeats out loud, followed by the single biggest move of the
+    period. Both are read off the summary rather than written, so the report says
+    something specific before anyone has written a word of narrative.
+    """
+    now = summary["totals"]["this"]
+    moves = summary["totals"].get("moves") or {}
+    roas = now.get("roas")
+    if not roas:
+        return ""
+    lede = (f'blended return on {_fmt(now["spend"], "$")} of spend '
+            f'over {esc(summary["period"]["label"])}')
+    return (f'<div class="hero"><div class="top">'
+            f'<div class="n">{roas:.2f}x</div>'
+            f'<div class="lede">{lede} {_delta_badge(moves.get("roas"))}</div></div>'
+            f'{_headline_sentence(summary)}</div>')
+
+
+def _headline_sentence(summary):
+    """The biggest material move of the period, stated in one line.
+
+    A channel that did not exist last period has no percentage to move by: the
+    aggregator returns `pct: None` and marks it material, which is correct. Reading
+    that as a number crashed the whole build the first month anyone launched a new
+    channel, which is the most ordinary thing a media buyer does.
+    """
+    moves = summary.get("headline_moves") or []
+    if not moves:
+        return ""
+    top = moves[0]
+    word, unit = METRIC_WORDS.get(top["metric"], (top["metric"], ""))
+    size = _fmt(abs(top["absolute"] or 0), "$" if unit == "$" else "",
+                2 if unit == "x" else 0)
+    tail = size if unit == "$" else f"{size}{unit}"
+    if top.get("pct") is None:
+        headline = f'{esc(top["channel"])} is new this period'
+        return f'<div class="cap">The move of the period: <b>{headline}</b> ({tail} {word}).</div>'
+    direction = "up" if top["pct"] > 0 else "down"
+    headline = f'{esc(top["channel"])} {word} {direction} {abs(top["pct"]):.0%}'
+    return f'<div class="cap">The move of the period: <b>{headline}</b> ({tail}).</div>'
 
 
 def _tiles(totals, store):
@@ -84,11 +136,24 @@ def _channel_row(channel):
 
 
 def _channel_chart(channels):
-    values = [{"label": c["channel"], "value": c["this"]["roas"] or 0,
-               "emphasis": c["this"]["roas"] == max((x["this"]["roas"] or 0)
-                                                     for x in channels)}
-              for c in channels if c["this"]["spend"] > 0]
-    return roas_chart(values) if values else ""
+    """Ranked by spend, because that is the order a budget conversation follows."""
+    spending = sorted((channel for channel in channels if channel["this"]["spend"] > 0),
+                      key=lambda channel: -channel["this"]["spend"])
+    if not spending:
+        return ""
+    biggest = spending[0]["channel"]
+    rows = [{
+        "label": channel["channel"],
+        "spend": channel["this"]["spend"],
+        "value_label": _mix_label(channel["this"]),
+        "emphasis": channel["channel"] == biggest,
+    } for channel in spending]
+    return channel_mix_chart(rows)
+
+
+def _mix_label(now):
+    roas = f'{now["roas"]:.2f}x' if now.get("roas") else "n/a"
+    return f'{_fmt(now["spend"], "$")} spent, {roas} back' 
 
 
 def _rests_on(store):
@@ -98,50 +163,65 @@ def _rests_on(store):
         refund_line = (" Refunds were not in the store export this period, so revenue is "
                        "gross of returns.")
     return (
-        '<h2>What these numbers rest on</h2>'
-        '<p>Every revenue figure above is what the ad platforms claim they produced. '
-        'Platforms grade their own homework: each one counts the sales it believes it '
-        'caused, and those counts overlap, so channel revenue adds up to more than the '
-        f'store actually took.{refund_line} Blended ROAS is the one figure here that no '
-        'attribution model can inflate, because it compares total store revenue to total '
-        'spend - trust it first.</p>'
-        '<p>To credit each channel against the cash actually collected in Stripe and the '
-        'CRM, rather than against what the platform says about its own work, the numbers '
-        'have to be reconciled at the order level. That is what '
-        '<a href="https://metrikia.io/">Metrikia</a> does, and it is what turns a report '
-        'a client half-believes into one they can act on.</p>'
-        '<p style="color:#898781;font-size:13px">Want this read on the account with you? '
-        'Gaetan, media buying, runs a 30-minute review of the numbers and what to do next, '
-        'no charge. <a href="https://cal.com/gaetanhamel/metrikia?overlayCalendar=true">'
-        'Book it here</a>.</p>')
+        '<div class="rests"><h2>What these numbers rest on</h2>'
+        '<p>Every revenue figure above is what the ad platforms claim they produced, and '
+        'each platform counts the sales it believes it caused. Those counts overlap, so '
+        f'channel revenue adds up to more than the store actually took.{refund_line} '
+        'Blended ROAS is the one figure no attribution model can inflate: trust it first.</p>'
+        '<p>Crediting each channel against the cash actually collected takes reconciling at '
+        'the order level, which is what <a href="https://metrikia.io/">Metrikia</a> does.</p>'
+        '<a class="cta" href="https://cal.com/gaetanhamel/metrikia?overlayCalendar=true">'
+        'Book a 30-minute review with Gaetan</a></div>')
 
 
 STYLES = """
-:root{--ink:#0b0b0b;--ink2:#52514e;--muted:#898781;--grid:#e1e0d9;
---surface:#fcfcfb;--up:#0ca30c;--down:#d03b3b;--rule:rgba(11,11,11,.10)}
+:root{--ink:#0b0b0b;--ink2:#3d3c39;--muted:#8a8880;--grid:#e6e5de;
+--surface:#ffffff;--panel:#f7f6f2;--up:#0a7d33;--down:#c0392b;
+--blue:#2a78d6;--rule:rgba(11,11,11,.12)}
 *{box-sizing:border-box}
-body{margin:0;padding:32px;background:var(--surface);color:var(--ink);
-font:15px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif;
-max-width:820px;margin-inline:auto;-webkit-font-smoothing:antialiased}
-h1{font-size:25px;margin:0 0 4px;letter-spacing:-.01em}
-h2{font-size:17px;margin:36px 0 12px}
-.meta{color:var(--muted);font-size:13px;margin-bottom:24px}
-.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:18px 0}
-.tile{border:1px solid var(--rule);border-radius:8px;padding:12px 13px}
-.tile .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
-.tile .v{font-size:19px;font-weight:600;margin-top:3px}
+body{margin:0 auto;padding:40px 32px 56px;background:var(--surface);color:var(--ink);
+font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;
+max-width:820px;-webkit-font-smoothing:antialiased}
+h1{font-size:22px;margin:0 0 4px;letter-spacing:-.01em;font-weight:600}
+h2{margin:42px 0 14px;font-size:11.5px;font-weight:600;letter-spacing:.07em;
+text-transform:uppercase;color:var(--muted)}
+p{margin:0 0 18px;color:var(--ink2);max-width:65ch}
+/* A narrative claim opens with its bold sentence on its own line: the claim is
+   the finding, the lines under it are only support. */
+p>strong:first-child{display:block;color:var(--ink);font-size:15.5px;margin-bottom:2px}
+.meta{color:var(--muted);font-size:13px;margin-bottom:26px}
+.hero{border:1px solid var(--rule);border-radius:12px;padding:24px 26px;
+background:var(--panel);margin:0 0 10px}
+.hero .top{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.hero .n{font-size:50px;font-weight:600;line-height:1;letter-spacing:-.025em}
+.hero .lede{color:var(--muted);font-size:15px;max-width:36ch}
+.hero .cap{color:var(--ink2);font-size:15px;margin-top:16px;max-width:62ch}
+.hero .cap b{color:var(--ink);font-weight:600}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0 34px}
+.tile{border:1px solid var(--rule);border-radius:9px;padding:13px 14px}
+.tile .k{font-size:10.5px;color:var(--muted);text-transform:uppercase;
+letter-spacing:.05em;line-height:1.35;min-height:28px}
+.tile .v{font-size:22px;font-weight:600;margin-top:4px;letter-spacing:-.015em}
 .d{font-size:12px;font-weight:600;margin-left:2px}
 .d.up{color:var(--up)} .d.down{color:var(--down)} .d.flat{color:var(--muted)}
-table{border-collapse:collapse;width:100%;font-size:13px;margin:8px 0;
+table{border-collapse:collapse;width:100%;font-size:12.5px;margin:10px 0 0;
 font-variant-numeric:tabular-nums}
-th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--grid)}
-th{color:var(--muted);font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+th,td{text-align:left;padding:6px 10px;border-bottom:1px solid var(--grid)}
+th{color:var(--muted);font-weight:500;font-size:10.5px;text-transform:uppercase;
+letter-spacing:.04em}
 td:not(:first-child),th:not(:first-child){text-align:right}
-figure{margin:14px 0;break-inside:avoid}
-p{margin:0 0 12px;color:var(--ink2)}
-a{color:#2a78d6}
-@media print{body{padding:0;max-width:none;font-size:11pt}
-@page{size:letter;margin:16mm} h2{margin-top:22px} figure,.tile{break-inside:avoid}
+figure{margin:0 0 18px;break-inside:avoid}
+ul{padding-left:0;margin:0;list-style:none;max-width:65ch}
+li{margin-bottom:10px;font-size:14.5px;color:var(--ink2);padding-left:16px;position:relative}
+li::before{content:"";position:absolute;left:0;top:9px;width:5px;height:5px;
+border-radius:50%;background:var(--muted)}
+.rests{margin-top:38px;padding-top:18px;border-top:1px solid var(--grid);max-width:65ch}
+.rests p{font-size:13.5px}
+.cta{display:inline-block;margin-top:6px;font-weight:600;color:var(--blue)}
+a{color:var(--blue)}
+@media print{body{padding:0;max-width:none;font-size:10.5pt}
+@page{size:letter;margin:15mm} h2{margin-top:26px}
+figure,.tile,.hero{break-inside:avoid}
 thead{display:table-header-group}}
 """
 
@@ -155,8 +235,9 @@ def render(summary, account, narrative):
     body = "".join([
         f'<h1>Performance report{" - " + esc(account) if account else ""}</h1>',
         f'<div class="meta">{esc(subtitle)}</div>',
-        '<h2>What happened</h2>',
+        _hero(summary),
         _tiles(summary["totals"], summary.get("store")),
+        '<h2>What happened</h2>',
         f'<figure>{_channel_chart(channels)}</figure>',
         f'<table>{_channel_table(channels)}</table>',
         '<h2>What we did, and why</h2>',
@@ -170,17 +251,6 @@ def render(summary, account, narrative):
             f'<style>{STYLES}</style></head><body>{body}</body></html>')
 
 
-def _load_json(path):
-    try:
-        with open(path, encoding="utf-8") as handle:
-            return json.load(handle)
-    except OSError as error:
-        print(f"Could not open {path}: {error}", file=sys.stderr)
-    except json.JSONDecodeError as error:
-        print(f"{path} is not valid JSON (run aggregate.py first): {error}", file=sys.stderr)
-    return None
-
-
 def main():
     parser = argparse.ArgumentParser(description="Build a client-ready HTML report.")
     parser.add_argument("summary_path", help="Output of aggregate.py")
@@ -189,9 +259,8 @@ def main():
     parser.add_argument("--out", default="client-report.html")
     args = parser.parse_args()
 
-    summary = _load_json(args.summary_path)
-    if summary is None:
-        return 1
+    with open(args.summary_path, encoding="utf-8") as handle:
+        summary = json.load(handle)
     if "error" in summary:
         print(f"Aggregation failed: {summary.get('message')}", file=sys.stderr)
         return 1

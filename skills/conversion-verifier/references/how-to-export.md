@@ -101,17 +101,20 @@ the error names every header it did see, which usually makes the problem obvious
 
 ---
 
-## The three questions worth asking
+## The four questions worth asking
 
 Everything else comes out of the files, including the deduplicated total once the
-second ad export is there. These three do not:
+second ad export is there. These four do not:
 
-1. **Does the store export contain all the revenue?** Amazon, retail, a second
+1. **Gross margin.** The one that decides whether any ROAS in the report is good
+   news. Break-even ROAS is 1 divided by the margin, so 62% margin means 1.61x.
+   Pass it as `--gross-margin 62`. A rough figure beats none.
+2. **Does the store export contain all the revenue?** Amazon, retail, a second
    store or subscriptions billed elsewhere all break the comparison.
-2. **Attribution setting in the ad account.** Default on Meta is 7-day click,
+3. **Attribution setting in the ad account.** Default on Meta is 7-day click,
    1-day view.
-3. **Do the ad account and the store share a timezone?** Ads Manager shows the ad
-   account timezone in the top bar; Shopify shows it under Settings → General.
+4. **Do the ad account and the store share a timezone?** Ads Manager shows the ad
+   account timezone in the top bar; Shopify shows it under Settings > General.
 
 If they do not know, assume the defaults and note the assumption in the report. An
 assumption stated is fine; an assumption hidden is not.

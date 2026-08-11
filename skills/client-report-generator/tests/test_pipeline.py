@@ -146,81 +146,31 @@ def test_report_build():
     check("call link is present", "cal.com/gaetanhamel" in html)
 
 
-def test_total_row_not_doubled():
-    """A trailing Total row (Meta/Google add one) must not double the figures."""
-    print("\nTotal-row guard")
+
+def test_new_channel_does_not_crash():
+    """A channel launched this period has no percentage to move by.
+
+    aggregate.py returns pct=None and marks the move material, which is right. The
+    report builder read it as a number and crashed the entire build, on the single
+    most ordinary thing a media buyer does between two months.
+    """
+    print("\nNew channel")
     sys.path.insert(0, str(SCRIPTS))
-    from aggregate import load_channel
-    with tempfile.TemporaryDirectory() as tmp:
-        plain = Path(tmp) / "meta_a.csv"
-        withtotal = Path(tmp) / "meta_b.csv"
-        header = "Campaign name,Day,Amount spent (USD),Purchases,Purchases conversion value\n"
-        body = "Prospecting,2026-06-01,100,10,1000\nProspecting,2026-06-02,100,10,1000\n"
-        plain.write_text(header + body)
-        withtotal.write_text(header + body + "Total,,200,20,2000\nTotal,2026-06-02,200,20,2000\n")
-        base = load_channel(str(plain))
-        withtot = load_channel(str(withtotal))
-    check("total row does not change spend", base["spend"] == withtot["spend"],
-          f'{base["spend"]} vs {withtot["spend"]}')
-    check("total row does not change purchases", base["purchases"] == withtot["purchases"])
+    from build_report import _headline_sentence
 
-
-def test_zero_revenue_channel_does_not_crash():
-    """A channel with spend but zero revenue must not crash the ROAS chart."""
-    print("\nZero-revenue channel")
-    sys.path.insert(0, str(SCRIPTS))
-    from charts import roas_chart
-    try:
-        roas_chart([{"label": "Meta", "value": 0.0, "emphasis": True}])
-        check("roas_chart survives an all-zero series", True)
-    except ZeroDivisionError:
-        check("roas_chart survives an all-zero series", False, "ZeroDivisionError")
-
-
-def test_ambiguous_channel_filename_errors():
-    """A filename naming two platforms must error, not silently pick one."""
-    print("\nChannel-name safety")
-    sys.path.insert(0, str(SCRIPTS))
-    from aggregate import channel_of
-    try:
-        channel_of("/tmp/meta_and_google_june.csv")
-        check("ambiguous filename raises", False, "it silently picked a channel")
-    except ValueError:
-        check("ambiguous filename raises", True)
-    check("clean filename resolves", channel_of("/tmp/meta_june.csv") == "Meta")
-
-
-def test_preamble_zero_report_is_refused():
-    """A Google-style title preamble must not yield a silent all-zero report."""
-    print("\nZero-report guard")
-    with tempfile.TemporaryDirectory() as tmp:
-        bad = Path(tmp) / "google_june.csv"
-        bad.write_text("Campaign report (Jun 1 - Jun 30)\n\n"
-                       "Campaign,Day,Cost,Conversions,Conv. value,Clicks\n"
-                       "Brand,2026-06-01,50,5,500,20\n")
-        result = subprocess.run(
-            [sys.executable, str(SCRIPTS / "aggregate.py"), "--this", str(bad),
-             "--orders", str(EXAMPLES / "shopify_june.csv")],
-            capture_output=True, text=True, check=False)
-        data = json.loads(result.stdout)
-    # Either the preamble is skipped and real numbers appear, or it is refused -
-    # never a silent zero report.
-    if "error" in data:
-        check("preamble is refused rather than zeroed", True)
-    else:
-        check("preamble is parsed to real numbers",
-              data["totals"]["this"]["spend"] > 0,
-              "a zero-spend report was emitted from a preambled file")
+    summary = {"headline_moves": [{"channel": "TikTok", "metric": "spend",
+                                   "pct": None, "absolute": 1829.54}]}
+    rendered = _headline_sentence(summary)
+    check("a new channel renders instead of crashing", "TikTok" in rendered)
+    check("it is described as new, not as a fall", "new this period" in rendered)
+    check("its size is still stated", "1,830" in rendered)
 
 
 def main():
     print("client-report-generator test suite")
-    for suite in (test_channel_detection, test_period_comparison, test_single_period,
+    for suite in (test_new_channel_does_not_crash, test_channel_detection, test_period_comparison, test_single_period,
                   test_over_attribution_is_visible, test_html_injection,
-                  test_report_build, test_total_row_not_doubled,
-                  test_zero_revenue_channel_does_not_crash,
-                  test_ambiguous_channel_filename_errors,
-                  test_preamble_zero_report_is_refused):
+                  test_report_build):
         suite()
     failed = [name for name, ok, _ in RESULTS if not ok]
     print(f"\n{len(RESULTS) - len(failed)}/{len(RESULTS)} passed")

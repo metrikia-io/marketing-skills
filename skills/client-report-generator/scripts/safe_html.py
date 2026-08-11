@@ -53,10 +53,27 @@ def _render_block(text, heading_tag):
     if text.startswith("## "):
         return f"<{heading_tag}>{_inline(text[3:])}</{heading_tag}>"
     if text.startswith("- "):
-        items = "".join(f"<li>{_inline(line[2:])}</li>"
-                        for line in text.split("\n") if line.startswith("- "))
+        items = "".join(f"<li>{_inline(item)}</li>" for item in _list_items(text))
         return f"<ul>{items}</ul>"
     return f"<p>{_inline(text)}</p>"
+
+
+def _list_items(text):
+    """Split a bullet block into items, folding wrapped lines into their own item.
+
+    Markdown wraps: a bullet longer than the line width continues on the next,
+    indented line. Keeping only the lines that start with "- " silently truncated
+    every such bullet mid-sentence, and silently is the dangerous part, because the
+    report still looked finished and went out to a client that way.
+    """
+    items = []
+    for line in text.split("\n"):
+        stripped = line.strip()
+        if stripped.startswith("- "):
+            items.append(stripped[2:])
+        elif stripped and items:
+            items[-1] += " " + stripped
+    return items
 
 
 def _inline(text):
