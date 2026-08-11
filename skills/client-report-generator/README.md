@@ -28,8 +28,8 @@ senior media buyer wrote it, because it is written from the actual figures.
 ## Quick start
 
 ```bash
-git clone https://github.com/metrikia/client-report-generator.git
-cd client-report-generator
+git clone https://github.com/metrikia-io/marketing-skills.git
+cd marketing-skills/skills/client-report-generator
 
 python scripts/aggregate.py \
   --this   examples/meta_june.csv examples/google_june.csv \

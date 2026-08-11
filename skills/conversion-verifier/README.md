@@ -41,8 +41,8 @@ day-broken row sum, and it measures the inflation for you once it does.
 ## Quick start
 
 ```bash
-git clone https://github.com/metrikia/conversion-verifier.git
-cd conversion-verifier
+git clone https://github.com/metrikia-io/marketing-skills.git
+cd marketing-skills/skills/conversion-verifier
 
 # see what a finding looks like, on synthetic data
 python scripts/reconcile.py \
